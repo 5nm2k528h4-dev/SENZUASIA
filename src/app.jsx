@@ -281,6 +281,7 @@ const Dashboard=()=>{
   const[strains,sst]=useState([]);
   const[loading,sl]=useState(true);
   const[sel,ssel]=useState(null);
+  const[period,setPeriod]=useState("wash");
 
   useEffect(()=>{
     Promise.all([sbFetch("sessions?select=*&order=date.desc"),sbFetch("washes?select=*"),sbFetch("pesees?select=*"),sbFetch("strains?select=*&order=nom.asc")])
@@ -313,21 +314,29 @@ const Dashboard=()=>{
   },[washes,sessions]);
   const maxW=wBS[0]?.[1]||1;
 
-  const sWD=useMemo(()=>{
-    const m={};
-    washes.forEach(w=>{const se=sessions.find(s=>s.id===w.session_id);if(!se?.date)return;const st=se.strain||"?";const mo=se.date.slice(0,7);if(!m[st])m[st]={};m[st][mo]=(m[st][mo]||0)+1;});
-    return m;
-  },[washes,sessions]);
-  const mos=[...new Set(washes.map(w=>{const s=sessions.find(x=>x.id===w.session_id);return s?.date?.slice(0,7);}).filter(Boolean))].sort();
+  // ── Unified chart data by period ──
+  const weekOf=(d)=>{const dt=new Date(d+"T12:00:00");const oj=new Date(dt.getFullYear(),0,1);const days=Math.floor((dt-oj)/86400000);return `S${Math.ceil((days+oj.getDay()+1)/7)}`;};
+  const monthLbl=(d)=>new Date(d+"T12:00:00").toLocaleDateString("fr-FR",{month:"short"});
+  const quarterOf=(d)=>{const dt=new Date(d+"T12:00:00");return `T${Math.floor(dt.getMonth()/3)+1} ${String(dt.getFullYear()).slice(2)}`;};
+  const yearOf=(d)=>d.slice(0,4);
 
-  // ISO week number from date string
-  const weekOf=(ds)=>{const d=new Date(ds+"T12:00:00");const oneJan=new Date(d.getFullYear(),0,1);const days=Math.floor((d-oneJan)/86400000);return `S${Math.ceil((days+oneJan.getDay()+1)/7)}`;};
-  const weekWashData=useMemo(()=>{
-    const m={};
-    washes.forEach(w=>{const se=sessions.find(s=>s.id===w.session_id);if(!se?.date)return;const st=se.strain||"?";const wk=weekOf(se.date);if(!m[st])m[st]={};m[st][wk]=(m[st][wk]||0)+1;});
-    return m;
-  },[washes,sessions]);
-  const weeks=[...new Set(washes.map(w=>{const s=sessions.find(x=>x.id===w.session_id);return s?.date?weekOf(s.date):null;}).filter(Boolean))].sort((a,b)=>parseInt(a.slice(1))-parseInt(b.slice(1)));
+  const chart=useMemo(()=>{
+    // For "wash": x = wash number (W1..Wn) across all sessions, count per strain
+    const strainNames=[...new Set(sessions.map(s=>s.strain).filter(Boolean))].slice(0,6);
+    const data={}; strainNames.forEach(s=>data[s]={});
+    let labels=[];
+    if(period==="wash"){
+      const maxNum=Math.max(1,...washes.map(w=>w.numero||0));
+      labels=Array.from({length:maxNum},(_,i)=>`W${i+1}`);
+      washes.forEach(w=>{const se=sessions.find(s=>s.id===w.session_id);if(!se?.strain)return;const k=`W${w.numero}`;if(!data[se.strain])data[se.strain]={};data[se.strain][k]=(data[se.strain][k]||0)+1;});
+    }else{
+      const fn = period==="semaine"?weekOf : period==="mois"?monthLbl : period==="3mois"?quarterOf : yearOf;
+      const set=new Set();
+      washes.forEach(w=>{const se=sessions.find(s=>s.id===w.session_id);if(!se?.date||!se?.strain)return;const k=fn(se.date);set.add(k);if(!data[se.strain])data[se.strain]={};data[se.strain][k]=(data[se.strain][k]||0)+1;});
+      labels=[...set];
+    }
+    return {strainNames,data,labels};
+  },[washes,sessions,period]);
 
   const getR=(nom)=>{const se=sessions.filter(s=>s.strain===nom);const pe=pesees.filter(p=>se.find(s=>s.id===p.session_id));const b=se.reduce((a,s)=>a+(parseFloat(s.biomasse_kg)||0),0);const po=pe.reduce((a,p)=>a+(parseFloat(p.poids_sec_g)||0),0);return b>0?((po/(b*1000))*100).toFixed(2):null;};
 
@@ -375,38 +384,54 @@ const Dashboard=()=>{
 
       <Crd>
         <STL icon="📊" text="ANALYSE WASHES"/>
-        <div style={{fontSize:9,color:T.dim,marginBottom:6,letterSpacing:"0.1em",textTransform:"uppercase"}}>Washes par strain / semaine</div>
+        {/* Period selector */}
+        <div style={{display:"flex",gap:6,marginBottom:14,overflowX:"auto",scrollbarWidth:"none"}}>
+          {[["wash","Wash"],["semaine","Semaine"],["mois","Mois"],["3mois","3 Mois"],["an","An"]].map(([id,lbl])=>(
+            <button key={id} onClick={()=>setPeriod(id)} style={{flexShrink:0,padding:"7px 14px",borderRadius:9,fontSize:12,fontWeight:700,background:period===id?T.orange+"22":T.bg3,color:period===id?T.orange:T.dim,border:`1px solid ${period===id?T.orange+"66":T.border}`}}>{lbl}</button>
+          ))}
+        </div>
         {(()=>{
-          const strainsList=Object.keys(weekWashData).slice(0,6);
-          const W=320,H=120,PAD=24;
-          const maxV=Math.max(1,...strainsList.flatMap(st=>weeks.map(wk=>weekWashData[st]?.[wk]||0)));
-          const xStep=weeks.length>1?(W-PAD*2)/(weeks.length-1):0;
+          const {strainNames,data,labels}=chart;
+          const W=320,H=140,PAD=26;
+          const maxV=Math.max(1,...strainNames.flatMap(st=>labels.map(l=>data[st]?.[l]||0)));
+          const xStep=labels.length>1?(W-PAD*2)/(labels.length-1):0;
           const xy=(vi,val)=>[PAD+vi*xStep, H-PAD-((val/maxV)*(H-PAD*2))];
           const smooth=(pts)=>{
-            if(pts.length<2)return pts.map(p=>`${p[0]},${p[1]}`).join(" ");
+            if(pts.length<2)return "";
             let d=`M ${pts[0][0]},${pts[0][1]}`;
             for(let i=0;i<pts.length-1;i++){const[x0,y0]=pts[i],[x1,y1]=pts[i+1];const cx=(x0+x1)/2;d+=` C ${cx},${y0} ${cx},${y1} ${x1},${y1}`;}
             return d;
           };
+          if(labels.length===0)return<div style={{textAlign:"center",color:T.dim,padding:30,fontSize:13}}>Aucune donnée pour cette période</div>;
           return(
             <div style={{width:"100%",overflowX:"auto"}}>
-              <svg viewBox={`0 0 ${W} ${H}`} style={{width:"100%",minWidth:280,height:140}}>
+              <svg viewBox={`0 0 ${W} ${H}`} style={{width:"100%",minWidth:300,height:160}}>
+                <defs>
+                  {strainNames.map((st,i)=>{const c=SC[i%SC.length];return(
+                    <linearGradient key={st} id={`grad${i}`} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={c} stopOpacity="0.35"/>
+                      <stop offset="100%" stopColor={c} stopOpacity="0"/>
+                    </linearGradient>
+                  );})}
+                </defs>
                 {[0,0.5,1].map(g=>(<line key={g} x1={PAD} y1={H-PAD-g*(H-PAD*2)} x2={W-PAD} y2={H-PAD-g*(H-PAD*2)} stroke={T.border} strokeWidth="0.5"/>))}
-                {strainsList.map((st,i)=>{
+                {strainNames.map((st,i)=>{
                   const c=SC[i%SC.length];
-                  const pts=weeks.map((wk,vi)=>xy(vi,weekWashData[st]?.[wk]||0));
+                  const pts=labels.map((l,vi)=>xy(vi,data[st]?.[l]||0));
+                  if(pts.length<2)return <circle key={st} cx={pts[0]?.[0]} cy={pts[0]?.[1]} r="4" fill={c}/>;
+                  const area=`${smooth(pts)} L ${pts[pts.length-1][0]},${H-PAD} L ${pts[0][0]},${H-PAD} Z`;
                   return(<g key={st}>
-                    <path d={smooth(pts)} fill="none" stroke={c} strokeWidth="2.5" strokeLinecap="round"/>
-                    {pts.map((p,pi)=><circle key={pi} cx={p[0]} cy={p[1]} r="2.5" fill={c}/>)}
+                    <path d={area} fill={`url(#grad${i})`}/>
+                    <path d={smooth(pts)} fill="none" stroke={c} strokeWidth="2.5" strokeLinecap="round" style={{filter:`drop-shadow(0 0 4px ${c}88)`}}/>
                   </g>);
                 })}
-                {weeks.map((wk,vi)=>(<text key={wk} x={PAD+vi*xStep} y={H-6} fill={T.dim} fontSize="7" textAnchor="middle" fontFamily="DM Mono">{wk}</text>))}
+                {labels.map((l,vi)=>(labels.length<=14||vi%2===0)&&(<text key={l} x={PAD+vi*xStep} y={H-8} fill={T.dim} fontSize="7" textAnchor="middle" fontFamily="DM Mono">{l}</text>))}
               </svg>
-              <div style={{display:"flex",gap:14,justifyContent:"center",marginTop:4}}>
-                {strainsList.map((st,i)=>(
-                  <div key={st} style={{display:"flex",alignItems:"center",gap:5}}>
-                    <div style={{width:10,height:3,borderRadius:2,background:SC[i%SC.length]}}/>
-                    <span style={{fontSize:11,color:T.ink,fontWeight:600}}>{st}</span>
+              <div style={{display:"flex",gap:16,justifyContent:"center",marginTop:6}}>
+                {strainNames.map((st,i)=>(
+                  <div key={st} style={{display:"flex",alignItems:"center",gap:6}}>
+                    <div style={{width:14,height:3,borderRadius:2,background:SC[i%SC.length],boxShadow:`0 0 6px ${SC[i%SC.length]}`}}/>
+                    <span style={{fontSize:12,color:T.ink,fontWeight:600}}>{st}</span>
                   </div>
                 ))}
               </div>
