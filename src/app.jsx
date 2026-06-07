@@ -573,11 +573,6 @@ const Dashboard=()=>{
 
 // ── SESSION ───────────────────────────────────────────────────────────────────
 const eW=(n)=>({numero:n,micron:"",glace:"—",vitesse:"",duree_min:15,couleur_160:"",couleur_90:"",couleur_45:"",texture:"",contaminants:false,potentiel_wash_plus:false,notes:""});
-const eSess=()=>({machine:"",strain:"",biomasse_kg:8,type_biomasse:"Fresh Frozen",nb_sacs:16,heure_debut:"",heure_fin:"",notes:"",washes:Array.from({length:10},(_,i)=>eW(i+1))});
-const LSK="sz_draft_v5";
-
-// ── SESSION ───────────────────────────────────────────────────────────────────
-const eW=(n)=>({numero:n,micron:"",glace:"—",vitesse:"",duree_min:15,couleur_160:"",couleur_90:"",couleur_45:"",texture:"",contaminants:false,potentiel_wash_plus:false,notes:""});
 const eMach=(machine)=>({machine,strain:"",biomasse_kg:8,type_biomasse:"Fresh Frozen",nb_sacs:16,heure_debut:"",heure_fin:"",notes:"",washes:Array.from({length:10},(_,i)=>eW(i+1)),currentWash:1});
 const LSK_M=(m)=>`sz_m_${m.replace(/\s/g,"_")}`;
 
