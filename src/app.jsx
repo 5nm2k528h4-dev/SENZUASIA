@@ -282,6 +282,7 @@ const Dashboard=()=>{
   const[loading,sl]=useState(true);
   const[sel,ssel]=useState(null);
   const[period,setPeriod]=useState("wash");
+  const[statsOpen,setStatsOpen]=useState(false);
 
   useEffect(()=>{
     Promise.all([sbFetch("sessions?select=*&order=date.desc"),sbFetch("washes?select=*"),sbFetch("pesees?select=*"),sbFetch("strains?select=*&order=nom.asc")])
@@ -346,39 +347,36 @@ const Dashboard=()=>{
   if(loading)return<Load/>;
   return(
     <div style={{padding:"0 14px",paddingBottom:100,animation:"fadeIn 0.3s"}}>
-      <div style={{display:"flex",gap:10,marginBottom:10}}>
-        <KPI label="Sessions" value={sessions.length} col={T.orange}/>
-        <KPI label="Washes" value={washes.length} col={T.gold}/>
-      </div>
-      <div style={{display:"flex",gap:10,marginBottom:22,alignItems:"flex-start"}}>
-        <KPI label="Biomasse" value={`${totBio.toFixed(1)}kg`} col={T.green}/>
+      {/* Top bar: ☰ stats menu + Rendement */}
+      <div style={{display:"flex",gap:10,marginBottom:18,alignItems:"stretch"}}>
+        <button onClick={()=>setStatsOpen(true)} style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:14,padding:"0 18px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:5,minWidth:64}}>
+          <div style={{display:"flex",flexDirection:"column",gap:3}}>
+            {[0,1,2].map(i=><div key={i} style={{width:18,height:2,background:T.ink,borderRadius:1}}/>)}
+          </div>
+          <span style={{fontSize:8,color:T.dim,textTransform:"uppercase",letterSpacing:"0.1em"}}>Stats</span>
+        </button>
         <KPI label="Rendement moy." value={rendM?`${rendM}%`:"—"} col={T.purple} framed
           detail={<div>{rendBS.filter(r=>r.rend!=="—").map(r=><div key={r.nom} style={{display:"flex",justifyContent:"space-between",marginBottom:4}}><span style={{fontSize:12,color:T.ink}}>{r.nom}</span><span style={{fontSize:12,fontWeight:700,color:T.gold,fontFamily:"DM Mono"}}>{r.rend}%</span></div>)}<div style={{fontSize:9,color:T.dim,marginTop:6}}>Basé sur {rendBS.filter(r=>r.rend!=="—").length} strain(s)</div></div>}
         />
       </div>
 
-      {uStr.length>0&&(
-        <div style={{marginBottom:22}}>
-          <STL icon="🃏" text="STRAINS"/>
-          <div style={{display:"flex",gap:12,overflowX:"auto",paddingBottom:10,scrollbarWidth:"none"}}>
-            {uStr.map((s,i)=>{
-              const nom=s.nom||s,r=getR(nom),c=SC[i%SC.length],rec=r&&parseFloat(r)>4;
-              return(
-                <div key={nom} onClick={()=>ssel(nom)} style={{width:155,flexShrink:0,cursor:"pointer",borderRadius:16,overflow:"hidden",background:`linear-gradient(160deg,${T.bg3},${c}18)`,border:`2px solid ${rec?T.aura:c+"44"}`,animation:rec?"aura 2.5s infinite":"none"}}>
-                  <div style={{height:110,background:s.photo_url?`url(${s.photo_url}) center/cover`:`linear-gradient(135deg,${c}33,${T.bg})`,display:"flex",alignItems:"center",justifyContent:"center",position:"relative"}}>
-                    {!s.photo_url&&<div style={{fontSize:30,opacity:0.3}}>🌿</div>}
-                    {rec&&<div style={{position:"absolute",top:6,right:6,background:T.aura,borderRadius:5,padding:"1px 6px",fontSize:8,fontWeight:800,color:"#000"}}>★ REC</div>}
-                  </div>
-                  <div style={{padding:"10px 12px",background:`${T.bg}CC`}}>
-                    <div style={{fontSize:14,fontWeight:900,fontStyle:"italic",color:T.white,marginBottom:3,textShadow:`1px 1px 0 ${c}`}}>{nom}</div>
-                    <div style={{fontSize:22,fontWeight:800,fontFamily:"DM Mono",color:rec?T.aura:c,animation:rec?"rglow 2s infinite":"none"}}>{r?`${r}%`:"—"}</div>
-                    <div style={{fontSize:9,color:T.dim,marginTop:3}}>Tap pour détails</div>
-                  </div>
+      {/* Stats slide-in menu */}
+      {statsOpen&&(
+        <div style={{position:"fixed",inset:0,zIndex:450,background:"#000000AA"}} onClick={()=>setStatsOpen(false)}>
+          <div onClick={e=>e.stopPropagation()} style={{position:"absolute",top:0,left:0,bottom:0,width:"75%",maxWidth:300,background:T.bg2,borderRight:`1px solid ${T.border}`,padding:20,paddingTop:"max(20px,env(safe-area-inset-top))",animation:"min 0.25s ease",boxShadow:"4px 0 30px #00000099"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+              <span style={{fontSize:14,fontWeight:800,color:T.white}}>📊 Statistiques</span>
+              <button onClick={()=>setStatsOpen(false)} style={{background:"transparent",color:T.dim,fontSize:20}}>✕</button>
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:12}}>
+              {[["Sessions",sessions.length,T.orange],["Washes",washes.length,T.gold],["Biomasse",`${totBio.toFixed(1)}kg`,T.green]].map(([l,v,c])=>(
+                <div key={l} style={{background:T.card,border:`1px solid ${c}33`,borderRadius:14,padding:"16px 18px"}}>
+                  <div style={{fontSize:9,color:T.dim,textTransform:"uppercase",letterSpacing:"0.12em",marginBottom:6}}>{l}</div>
+                  <div style={{fontSize:34,fontWeight:800,color:c,fontFamily:"DM Mono",lineHeight:1}}>{v}</div>
                 </div>
-              );
-            })}
+              ))}
+            </div>
           </div>
-          <div style={{fontSize:9,color:T.dim,textAlign:"center",marginTop:4}}>← Swipe · Tap pour détails →</div>
         </div>
       )}
 
@@ -449,8 +447,43 @@ const Dashboard=()=>{
               <div style={{height:4,background:T.border,borderRadius:2}}><div style={{height:"100%",width:`${(cnt/maxW)*100}%`,background:SC[i%SC.length],borderRadius:2,transition:"width 0.5s"}}/></div>
             </div>
           ))}
+          {/* Rendement banner integrated */}
+          <div style={{borderTop:`1px solid ${T.border}`,marginTop:10,paddingTop:12,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <span style={{fontSize:11,color:T.dim,letterSpacing:"0.1em",textTransform:"uppercase"}}>Rendement par strain</span>
+          </div>
+          {rendBS.filter(r=>r.rend!=="—").map((r,i)=>(
+            <div key={r.nom} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:6}}>
+              <span style={{fontSize:12,color:T.white}}>{r.nom}</span>
+              <span style={{fontSize:14,fontWeight:800,color:T.gold,fontFamily:"DM Mono"}}>{r.rend}%</span>
+            </div>
+          ))}
         </div>
       </Crd>
+
+      {uStr.length>0&&(
+        <div style={{marginBottom:22,marginTop:16}}>
+          <STL icon="🃏" text="STRAINS"/>
+          <div style={{display:"flex",gap:12,overflowX:"auto",paddingBottom:10,scrollbarWidth:"none"}}>
+            {uStr.map((s,i)=>{
+              const nom=s.nom||s,r=getR(nom),c=SC[i%SC.length],rec=r&&parseFloat(r)>4;
+              return(
+                <div key={nom} onClick={()=>ssel(nom)} style={{width:155,flexShrink:0,cursor:"pointer",borderRadius:16,overflow:"hidden",background:`linear-gradient(160deg,${T.bg3},${c}18)`,border:`2px solid ${rec?T.aura:c+"44"}`,animation:rec?"aura 2.5s infinite":"none"}}>
+                  <div style={{height:110,background:s.photo_url?`url(${s.photo_url}) center/cover`:`linear-gradient(135deg,${c}33,${T.bg})`,display:"flex",alignItems:"center",justifyContent:"center",position:"relative"}}>
+                    {!s.photo_url&&<div style={{fontSize:30,opacity:0.3}}>🌿</div>}
+                    {rec&&<div style={{position:"absolute",top:6,right:6,background:T.aura,borderRadius:5,padding:"1px 6px",fontSize:8,fontWeight:800,color:"#000"}}>★ REC</div>}
+                  </div>
+                  <div style={{padding:"10px 12px",background:`${T.bg}CC`}}>
+                    <div style={{fontSize:14,fontWeight:900,fontStyle:"italic",color:T.white,marginBottom:3,textShadow:`1px 1px 0 ${c}`}}>{nom}</div>
+                    <div style={{fontSize:22,fontWeight:800,fontFamily:"DM Mono",color:rec?T.aura:c,animation:rec?"rglow 2s infinite":"none"}}>{r?`${r}%`:"—"}</div>
+                    <div style={{fontSize:9,color:T.dim,marginTop:3}}>Tap pour détails</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{fontSize:9,color:T.dim,textAlign:"center",marginTop:4}}>← Swipe · Tap pour détails →</div>
+        </div>
+      )}
 
       {sel&&selSt&&(
         <div style={{position:"fixed",inset:0,zIndex:500,background:"#000000AA",display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={()=>ssel(null)}>
