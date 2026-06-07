@@ -292,9 +292,15 @@ const Dashboard=()=>{
   const totBio=sessions.reduce((a,s)=>a+(parseFloat(s.biomasse_kg)||0),0);
 
   const rendBS=useMemo(()=>{
-    const m={};
-    pesees.forEach(p=>{const se=sessions.find(s=>s.id===p.session_id);if(!se)return;const n=se.strain||"?";if(!m[n])m[n]={poids:0,bio:0};m[n].poids+=parseFloat(p.poids_sec_g)||0;m[n].bio+=parseFloat(se.biomasse_kg)||0;});
-    return Object.entries(m).map(([nom,v])=>({nom,rend:v.bio>0?((v.poids/(v.bio*1000))*100).toFixed(2):"—"})).sort((a,b)=>parseFloat(b.rend||0)-parseFloat(a.rend||0));
+    const strainNames=[...new Set(sessions.map(s=>s.strain).filter(Boolean))];
+    return strainNames.map(nom=>{
+      const se=sessions.filter(s=>s.strain===nom);
+      const pe=pesees.filter(p=>se.find(s=>s.id===p.session_id));
+      const bio=se.reduce((a,s)=>a+(parseFloat(s.biomasse_kg)||0),0);
+      const poids=pe.reduce((a,p)=>a+(parseFloat(p.poids_sec_g)||0),0);
+      const rend=bio>0?((poids/(bio*1000))*100).toFixed(2):"—";
+      return{nom,rend};
+    }).filter(r=>r.rend!=="—").sort((a,b)=>parseFloat(b.rend)-parseFloat(a.rend));
   },[pesees,sessions]);
 
   const rendM=useMemo(()=>{
