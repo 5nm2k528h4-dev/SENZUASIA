@@ -273,6 +273,60 @@ const KPI=({label,value,col=T.orange,detail,framed})=>{
   );
 };
 
+const TYPES_PRODUIT=["WPFF","Live Rosin"];
+
+const StrainTypeField=({strainNom,color})=>{
+  const[type,setType]=useState(null);
+  const[saving,setSaving]=useState(false);
+  useEffect(()=>{sbFetch(`strains?nom=eq.${encodeURIComponent(strainNom)}&select=type_produit`).then(d=>{if(d?.[0]) setType(d[0].type_produit||null);}).catch(()=>{});},[strainNom]);
+  const save=async(v)=>{setType(v);setSaving(true);try{await sbFetch(`strains?nom=eq.${encodeURIComponent(strainNom)}`,{method:"PATCH",prefer:"return=minimal",body:JSON.stringify({type_produit:v})});}catch(e){}finally{setSaving(false);}};
+  return(
+    <div style={{flex:1,background:T.bg3,borderRadius:12,padding:"12px 14px",border:`1px solid ${color}44`}}>
+      <div style={{fontSize:9,color:T.dim,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:8}}>Type</div>
+      <div style={{display:"flex",flexDirection:"column",gap:6}}>
+        {TYPES_PRODUIT.map(t=>(
+          <button key={t} onClick={()=>save(t)} style={{padding:"6px 10px",borderRadius:8,fontSize:11,fontWeight:700,background:type===t?color+"33":T.bg,border:`1px solid ${type===t?color:T.border}`,color:type===t?color:T.dim,textAlign:"left"}}>{t}</button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const StrainEditFields=({strainNom,color,onClose})=>{
+  const[data,setData]=useState({odeur:"",gout:"",mode_cure:"",notes:"",genetique:""});
+  const[loaded,setLoaded]=useState(false);
+  const[saving,setSaving]=useState(false);
+  useEffect(()=>{sbFetch(`strains?nom=eq.${encodeURIComponent(strainNom)}&select=*`).then(d=>{if(d?.[0]){setData({odeur:d[0].odeur||"",gout:d[0].gout||"",mode_cure:d[0].mode_cure||"",notes:d[0].notes||"",genetique:d[0].genetique||""});}setLoaded(true);}).catch(()=>setLoaded(true));},[strainNom]);
+  const save=async()=>{setSaving(true);try{const ex=await sbFetch(`strains?nom=eq.${encodeURIComponent(strainNom)}&select=id`);if(ex?.length>0)await sbFetch(`strains?nom=eq.${encodeURIComponent(strainNom)}`,{method:"PATCH",prefer:"return=minimal",body:JSON.stringify(data)});else await sbFetch("strains",{method:"POST",prefer:"return=minimal",body:JSON.stringify({nom:strainNom,...data})});}catch(e){alert("Erreur: "+e.message);}finally{setSaving(false);}};
+  if(!loaded)return<div style={{color:T.dim,textAlign:"center",padding:12}}>...</div>;
+  return(
+    <div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
+        {[["Odeur","odeur","Ex: Terreuse..."],["Goût","gout","Ex: Diesel..."],["Génétique","genetique","Ex: GMO x TK"]].map(([l,k,ph])=>(
+          <div key={k} style={{background:T.bg3,borderRadius:10,padding:"10px 12px",borderLeft:`2px solid ${color}44`}}>
+            <div style={{fontSize:9,color:T.dim,marginBottom:4,letterSpacing:"0.1em",textTransform:"uppercase"}}>{l}</div>
+            <input value={data[k]} onChange={e=>setData(x=>({...x,[k]:e.target.value}))} placeholder={ph} style={{fontSize:13,padding:"4px 0",background:"transparent",border:"none",borderBottom:`1px solid ${T.border}`,borderRadius:0,color:T.white,width:"100%"}}/>
+          </div>
+        ))}
+        <div style={{background:T.bg3,borderRadius:10,padding:"10px 12px",borderLeft:`2px solid ${color}44`}}>
+          <div style={{fontSize:9,color:T.dim,marginBottom:6,letterSpacing:"0.1em",textTransform:"uppercase"}}>Cure</div>
+          <div style={{display:"flex",flexDirection:"column",gap:4}}>
+            {CURES.map(c=><button key={c} onClick={()=>setData(x=>({...x,mode_cure:c}))} style={{padding:"4px 8px",borderRadius:6,fontSize:11,fontWeight:700,background:data.mode_cure===c?color+"33":T.bg,border:`1px solid ${data.mode_cure===c?color:T.border}`,color:data.mode_cure===c?color:T.dim,textAlign:"left"}}>{c}</button>)}
+          </div>
+        </div>
+      </div>
+      <div style={{background:T.bg3,borderRadius:10,padding:"10px 12px",marginBottom:14,borderLeft:`2px solid ${color}44`}}>
+        <div style={{fontSize:9,color:T.dim,marginBottom:4,letterSpacing:"0.1em",textTransform:"uppercase"}}>Notes</div>
+        <textarea value={data.notes} onChange={e=>setData(x=>({...x,notes:e.target.value}))} rows={2} style={{resize:"none",background:"transparent",border:"none",borderBottom:`1px solid ${T.border}`,borderRadius:0,color:T.white,width:"100%",fontSize:13}}/>
+      </div>
+      <div style={{display:"flex",gap:10}}>
+        <button onClick={onClose} style={{flex:1,padding:"12px",borderRadius:12,background:"transparent",border:`1.5px solid ${T.border}`,color:T.dim,fontWeight:700,fontSize:14}}>✕ Fermer</button>
+        <button onClick={save} disabled={saving} style={{flex:1,padding:"12px",borderRadius:12,background:`linear-gradient(135deg,${color},${color}AA)`,color:"#fff",fontWeight:800,fontSize:14,boxShadow:`0 4px 14px ${color}44`}}>{saving?"...":"💾 Sauvegarder"}</button>
+      </div>
+    </div>
+  );
+};
+
 // ── DASHBOARD ─────────────────────────────────────────────────────────────────
 const Dashboard=()=>{
   const[sessions,ss]=useState([]);
@@ -494,25 +548,21 @@ const Dashboard=()=>{
       {sel&&selSt&&(
         <div style={{position:"fixed",inset:0,zIndex:500,background:"#000000AA",display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={()=>ssel(null)}>
           <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:360,background:`linear-gradient(160deg,${T.bg2},${selC}22)`,border:`2px solid ${selC}88`,borderRadius:24,overflow:"hidden",animation:"min 0.3s ease",boxShadow:`0 20px 60px #000000CC,0 0 40px ${selC}33`}}>
-            <div style={{height:180,background:selSt.photo_url?`url(${selSt.photo_url}) center/cover`:`linear-gradient(135deg,${selC}44,${T.bg3})`,display:"flex",alignItems:"flex-end",padding:16,position:"relative"}}>
-              {!selSt.photo_url&&<div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:60,opacity:0.15}}>🌿</div>}
-              <div>
-                <div style={{fontSize:26,fontWeight:900,fontStyle:"italic",color:T.white,textShadow:`2px 2px 0 ${selC}`}}>{sel}</div>
-                {selSt.genetique&&<div style={{fontSize:12,color:T.ink}}>{selSt.genetique}</div>}
-              </div>
+            <div style={{height:160,background:selSt.photo_url?`url(${selSt.photo_url}) center/cover`:`linear-gradient(135deg,${selC}44,${T.bg3})`,display:"flex",alignItems:"flex-end",justifyContent:"center",padding:16,position:"relative"}}>
+              {!selSt.photo_url&&<div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:50,opacity:0.15}}>🌿</div>}
+              <div style={{fontSize:30,fontWeight:900,fontStyle:"italic",color:T.white,textShadow:`2px 2px 0 ${selC}`,textAlign:"center"}}>{sel}</div>
             </div>
             <div style={{padding:18}}>
-              {(()=>{const r=getR(sel);const rec=r&&parseFloat(r)>4;return r&&<div style={{textAlign:"center",marginBottom:16}}><div style={{fontSize:9,color:T.dim,letterSpacing:"0.15em",textTransform:"uppercase"}}>Rendement</div><div style={{fontSize:48,fontWeight:800,fontFamily:"DM Mono",color:rec?T.aura:selC,animation:rec?"rglow 2s infinite":"none"}}>{r}%</div></div>;})()}
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:14}}>
-                {[["Odeur",selSt.odeur||"—"],["Goût",selSt.gout||"—"],["Cure",selSt.mode_cure||"—"],["Sessions",sessions.filter(s=>s.strain===sel).length]].map(([l,v])=>(
-                  <div key={l} style={{background:T.bg3,borderRadius:10,padding:"10px 12px",borderLeft:`2px solid ${selC}66`}}>
-                    <div style={{fontSize:9,color:T.dim,marginBottom:3}}>{l}</div>
-                    <div style={{fontSize:13,fontWeight:700,color:T.white}}>{v}</div>
+              {(()=>{const r=getR(sel);const rec=r&&parseFloat(r)>4;return r&&(
+                <div style={{display:"flex",gap:10,marginBottom:14}}>
+                  <div style={{flex:1,background:T.bg3,borderRadius:12,padding:"12px 14px",textAlign:"center",border:`1px solid ${selC}44`}}>
+                    <div style={{fontSize:9,color:T.dim,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:4}}>Rendement</div>
+                    <div style={{fontSize:28,fontWeight:800,fontFamily:"DM Mono",color:rec?T.aura:selC,animation:rec?"rglow 2s infinite":"none"}}>{r}%</div>
                   </div>
-                ))}
-              </div>
-              {selSt.notes&&<div style={{background:T.bg3,borderRadius:10,padding:12,marginBottom:14}}><div style={{fontSize:9,color:T.dim,marginBottom:4}}>NOTES</div><div style={{fontSize:13,color:T.ink,fontStyle:"italic"}}>{selSt.notes}</div></div>}
-              <button onClick={()=>ssel(null)} style={{width:"100%",padding:"12px",borderRadius:12,background:"transparent",border:`1.5px solid ${T.border}`,color:T.dim,fontWeight:700,fontSize:14}}>✕ Fermer</button>
+                  <StrainTypeField strainNom={sel} color={selC}/>
+                </div>
+              );})()}
+              <StrainEditFields strainNom={sel} color={selC} onClose={()=>ssel(null)}/>
             </div>
           </div>
         </div>
@@ -526,145 +576,203 @@ const eW=(n)=>({numero:n,micron:"",glace:"—",vitesse:"",duree_min:15,couleur_1
 const eSess=()=>({machine:"",strain:"",biomasse_kg:8,type_biomasse:"Fresh Frozen",nb_sacs:16,heure_debut:"",heure_fin:"",notes:"",washes:Array.from({length:10},(_,i)=>eW(i+1))});
 const LSK="sz_draft_v5";
 
-const Session=({strains})=>{
-  const[sess,setSess]=useState(()=>{try{const d=localStorage.getItem(LSK);return d?JSON.parse(d):eSess();}catch{return eSess();}});
-  const[aW,sAW]=useState(null);
-  const[saving,sSav]=useState(false);
-  const[sid,sSid]=useState(null);
-  const[clo,sClo]=useState(false);
-  const[pesees,sPes]=useState({"90µ":0,"45µ":0,"25µ":0});
+// ── SESSION ───────────────────────────────────────────────────────────────────
+const eW=(n)=>({numero:n,micron:"",glace:"—",vitesse:"",duree_min:15,couleur_160:"",couleur_90:"",couleur_45:"",texture:"",contaminants:false,potentiel_wash_plus:false,notes:""});
+const eMach=(machine)=>({machine,strain:"",biomasse_kg:8,type_biomasse:"Fresh Frozen",nb_sacs:16,heure_debut:"",heure_fin:"",notes:"",washes:Array.from({length:10},(_,i)=>eW(i+1)),currentWash:1});
+const LSK_M=(m)=>`sz_m_${m.replace(/\s/g,"_")}`;
 
-  useEffect(()=>{try{localStorage.setItem(LSK,JSON.stringify(sess));}catch{}},[sess]);
-  const sF=(k,v)=>setSess(s=>({...s,[k]:v}));
-  const sW=(i,k,v)=>setSess(s=>{const w=[...s.washes];w[i]={...w[i],[k]:v};return{...s,washes:w};});
+const MachineCard=({machine,strains})=>{
+  const lsk=LSK_M(machine);
+  const color=MC[machine]||T.orange;
+  const short=MS[machine];
+  const[data,setData]=useState(()=>{try{const d=localStorage.getItem(lsk);return d?JSON.parse(d):eMach(machine);}catch{return eMach(machine);}});
+  const[locked,setLocked]=useState(true);
+  const[face,setFace]=useState(null); // null=closed, "wash", "data"
+  const[saving,setSaving]=useState(false);
+  const timer=useTimer(machine);
 
-  const save=async()=>{
-    if(!sess.machine||!sess.strain){alert("Machine et strain requis.");return;}
-    sSav(true);
+  useEffect(()=>{try{localStorage.setItem(lsk,JSON.stringify(data));}catch{}},[data]);
+  const sF=(k,v)=>setData(d=>({...d,[k]:v}));
+  const sW=(i,k,v)=>setData(d=>{const w=[...d.washes];w[i]={...w[i],[k]:v};return{...d,washes:w};});
+  const curW=data.currentWash||1;
+  const curWData=data.washes[curW-1]||eW(curW);
+  const prevWData=curW>1?data.washes[curW-2]:null;
+  const strainNames=strains.length>0?[...new Set(strains.map(s=>s.nom||s))]:[];
+
+  const saveSession=async()=>{
+    if(!data.strain){alert("Strain requis.");return;}
+    setSaving(true);
     try{
-      const[row]=await sbFetch("sessions",{method:"POST",body:JSON.stringify({machine:sess.machine,strain:sess.strain,biomasse_kg:parseFloat(sess.biomasse_kg)||null,type_biomasse:sess.type_biomasse,nb_sacs:parseInt(sess.nb_sacs)||null,heure_debut:sess.heure_debut||null,heure_fin:sess.heure_fin||null,statut:"sechage",date:new Date().toISOString().slice(0,10),notes:sess.notes||null})});
-      const vW=sess.washes.filter(w=>w.micron);
-      if(vW.length>0)await sbFetch("washes",{method:"POST",prefer:"return=minimal",body:JSON.stringify(vW.map(w=>({session_id:row.id,numero:w.numero,micron:w.micron,glace:w.glace||null,vitesse:w.vitesse||null,duree_min:w.duree_min||null,couleur_160:w.couleur_160||null,couleur_90:w.couleur_90||null,couleur_45:w.couleur_45||null,texture:w.texture||null,contaminants:w.contaminants,notes:w.notes||null})))});
-      sSid(row.id);sClo(true);
+      const[row]=await sbFetch("sessions",{method:"POST",body:JSON.stringify({machine,strain:data.strain,biomasse_kg:parseFloat(data.biomasse_kg)||null,type_biomasse:data.type_biomasse,nb_sacs:parseInt(data.nb_sacs)||null,heure_debut:data.heure_debut||null,heure_fin:data.heure_fin||null,statut:"cloture",date:new Date().toISOString().slice(0,10),notes:data.notes||null})});
+      const validW=data.washes.filter(w=>w.micron);
+      if(validW.length>0)await sbFetch("washes",{method:"POST",prefer:"return=minimal",body:JSON.stringify(validW.map(w=>({session_id:row.id,numero:w.numero,micron:w.micron,glace:w.glace||null,vitesse:w.vitesse||null,duree_min:w.duree_min||null,couleur_160:w.couleur_160||null,couleur_90:w.couleur_90||null,couleur_45:w.couleur_45||null,texture:w.texture||null,contaminants:w.contaminants,notes:w.notes||null})))});
+      localStorage.removeItem(lsk);setData(eMach(machine));setFace(null);
+      alert(`✅ Session ${short} sauvegardée !`);
     }catch(e){alert("Erreur: "+e.message);}
-    finally{sSav(false);}
+    finally{setSaving(false);}
   };
 
-  const cloture=async()=>{
-    if(!sid)return;sSav(true);
-    try{
-      const rows=Object.entries(pesees).filter(([,v])=>parseFloat(v)>0).map(([micron,g])=>({session_id:sid,micron,poids_sec_g:parseFloat(g)}));
-      if(rows.length>0)await sbFetch("pesees",{method:"POST",prefer:"return=minimal",body:JSON.stringify(rows)});
-      await sbFetch(`sessions?id=eq.${sid}`,{method:"PATCH",prefer:"return=minimal",body:JSON.stringify({statut:"cloture"})});
-      localStorage.removeItem(LSK);setSess(eSess());sClo(false);sSid(null);alert("✅ Session clôturée !");
-    }catch(e){alert("Erreur: "+e.message);}
-    finally{sSav(false);}
-  };
-
-  const tot=Object.values(pesees).reduce((a,v)=>a+(parseFloat(v)||0),0);
-  const rend=sess.biomasse_kg>0?((tot/(parseFloat(sess.biomasse_kg)*1000))*100).toFixed(2):null;
-  const rec=rend&&parseFloat(rend)>4;
-  const sNames=strains.length>0?[...new Set(strains.map(s=>s.nom||s))]:[];
-  const mC=sess.machine?MC[sess.machine]||T.orange:T.dim;
+  const timerMins=timer.remaining!=null?Math.floor(timer.remaining/60):timer.duree;
+  const timerSecs=timer.remaining!=null?timer.remaining%60:0;
+  const timerOn=timer.running;
 
   return(
-    <div style={{padding:"0 14px",paddingBottom:100,animation:"fadeIn 0.3s"}}>
-      {clo?(
-        <Crd glow>
-          <STL icon="⏳" text="CHAMBRE DE L'ESPRIT ET DU TEMPS" col={T.gold}/>
-          <div style={{textAlign:"center",padding:"8px 0 14px"}}><Bdg col={T.gold}>EN SÉCHAGE — FREEZE DRYER</Bdg></div>
-          <STL icon="⚖" text="PESÉES FINALES"/>
-          {["90µ","45µ","25µ"].map(m=><Step key={m} label={`Poids sec ${m} (g)`} value={parseFloat(pesees[m])||0} onChange={v=>sPes(p=>({...p,[m]:v}))} step={0.1} max={9999} unit="g"/>)}
-          {rend&&(
-            <div style={{textAlign:"center",padding:16,marginBottom:16,background:rec?T.aura+"22":T.bg3,border:`2px solid ${rec?T.aura:T.border}`,borderRadius:12,animation:rec?"aura 1.5s infinite":"none"}}>
-              <div style={{fontSize:9,color:T.dim,marginBottom:4}}>RENDEMENT CALCULÉ</div>
-              <div style={{fontSize:60,fontWeight:800,fontFamily:"DM Mono",color:rec?T.aura:T.orange,animation:rec?"rglow 2s infinite":"none"}}>{rend}%</div>
-              {rec&&<div style={{fontSize:18,fontWeight:800,color:T.aura,marginTop:8}}>🔥 IT'S OVER 9000! 🔥</div>}
-              <div style={{fontSize:11,color:T.dim,marginTop:4}}>{tot.toFixed(1)}g / {(parseFloat(sess.biomasse_kg)*1000).toFixed(0)}g</div>
+    <>
+      {/* ── FACE 1 : Machine card ── */}
+      <div style={{background:`linear-gradient(135deg,${T.card},${color}12)`,border:`2px solid ${color}44`,borderRadius:20,padding:18,marginBottom:14,position:"relative"}}>
+        {/* Header */}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <div style={{width:10,height:10,borderRadius:"50%",background:timerOn?T.green:T.danger,boxShadow:`0 0 8px ${timerOn?T.green:T.danger}`,animation:timerOn?"tpulse 1s infinite":"none"}}/>
+            <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,color:color,letterSpacing:2}}>{short}</span>
+            {/* LED toggle */}
+            <div style={{display:"flex",background:T.bg3,borderRadius:20,border:`1px solid ${T.border}`,overflow:"hidden"}}>
+              {!timerOn&&<div style={{padding:"4px 10px",fontSize:10,fontWeight:800,color:T.danger,background:T.danger+"22"}}>OFF</div>}
+              {timerOn
+                ? <div style={{padding:"4px 12px",fontSize:11,fontWeight:800,fontFamily:"DM Mono",color:T.green,background:T.green+"22",animation:"tpulse 1s infinite"}}>{String(timerMins).padStart(2,"0")}:{String(timerSecs).padStart(2,"0")}</div>
+                : <div style={{padding:"4px 10px",fontSize:10,fontWeight:800,color:T.dim}}>ON</div>
+              }
             </div>
-          )}
-          <div style={{display:"flex",gap:10}}>
-            <BOL c="← Retour" onClick={()=>sClo(false)} col={T.dim}/>
-            <Btn c={saving?"Clôture...":"🏆 Clôturer"} onClick={cloture} disabled={saving} col={T.green}/>
           </div>
-        </Crd>
-      ):(
-        <>
-          {sess.machine&&(
-            <div style={{background:T.bg3,border:`1px solid ${mC}44`,borderRadius:12,padding:"10px 14px",marginBottom:14,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-              <div style={{display:"flex",alignItems:"center",gap:8}}>
-                <div style={{width:8,height:8,borderRadius:"50%",background:mC}}/>
-                <span style={{fontSize:12,color:mC,fontWeight:700}}>Chrono {MS[sess.machine]}</span>
+          <button onClick={()=>setLocked(x=>!x)} style={{background:"transparent",border:"none",fontSize:20,opacity:locked?1:0.5}}>
+            {locked?"🔒":"🔓"}
+          </button>
+        </div>
+
+        {/* Infos */}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
+          {[
+            ["Strain", locked
+              ? <div style={{fontSize:16,fontWeight:800,color:T.white}}>{data.strain||"—"}</div>
+              : <select value={data.strain} onChange={e=>sF("strain",e.target.value)} style={{fontSize:14,padding:"8px 12px"}}><option value="">Sélectionner...</option>{strainNames.map(s=><option key={s}>{s}</option>)}</select>
+            ],
+            ["Biomasse", locked
+              ? <div style={{fontSize:16,fontWeight:800,color:color}}>{data.biomasse_kg} kg</div>
+              : <Step label="" value={parseFloat(data.biomasse_kg)||0} onChange={v=>sF("biomasse_kg",v)} step={0.5} max={50} unit=" kg"/>
+            ],
+            ["Wash en cours", locked
+              ? <div style={{fontSize:16,fontWeight:800,color:color}}>W{curW}</div>
+              : <Step label="" value={curW} onChange={v=>sF("currentWash",v)} min={1} max={10}/>
+            ],
+            ["Sacs", locked
+              ? <div style={{fontSize:16,fontWeight:800,color:T.white}}>{data.nb_sacs}</div>
+              : <Step label="" value={parseInt(data.nb_sacs)||0} onChange={v=>sF("nb_sacs",v)} max={30}/>
+            ],
+          ].map(([l,v])=>(
+            <div key={l} style={{background:T.bg3,borderRadius:12,padding:"10px 12px",borderTop:`2px solid ${color}44`}}>
+              <div style={{fontSize:8,color:T.dim,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:4}}>{l}</div>
+              {v}
+            </div>
+          ))}
+        </div>
+
+        {!locked&&(
+          <div style={{marginBottom:12}}>
+            <BgSel label="Type biomasse" value={data.type_biomasse} onChange={v=>sF("type_biomasse",v)} options={["Fresh Frozen","Dry","Live"]}/>
+          </div>
+        )}
+
+        {/* Footer */}
+        <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+          {!locked&&<button onClick={()=>{setData(eMach(machine));localStorage.removeItem(lsk);}} style={{padding:"8px 16px",borderRadius:10,background:"transparent",border:`1px solid ${T.danger}`,color:T.danger,fontSize:12,fontWeight:700}}>↺ Reset</button>}
+          <button onClick={()=>setFace("wash")} style={{padding:"10px 22px",borderRadius:12,background:`linear-gradient(135deg,${color},${color}AA)`,color:"#fff",fontWeight:800,fontSize:14,boxShadow:`0 4px 14px ${color}44`}}>
+            WASH →
+          </button>
+        </div>
+      </div>
+
+      {/* ── MODAL FACES 2 & 3 ── */}
+      {face&&(
+        <div style={{position:"fixed",inset:0,zIndex:300,background:"#000000BB"}} onClick={()=>setFace(null)}>
+          <div onClick={e=>e.stopPropagation()} style={{position:"absolute",bottom:0,left:0,right:0,background:T.bg2,borderRadius:"20px 20px 0 0",border:`2px solid ${color}66`,maxHeight:"88vh",overflowY:"auto",animation:"dup 0.3s ease",paddingBottom:"max(20px,env(safe-area-inset-bottom))"}}>
+            {/* Modal header */}
+            <div style={{padding:"14px 18px",display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:`1px solid ${T.border}`,position:"sticky",top:0,background:T.bg2,zIndex:10}}>
+              <div style={{display:"flex",gap:8}}>
+                <button onClick={()=>setFace("wash")} style={{padding:"8px 18px",borderRadius:10,fontWeight:800,fontSize:13,background:face==="wash"?color+"22":T.bg3,color:face==="wash"?color:T.dim,border:`1px solid ${face==="wash"?color+"66":T.border}`}}>💧 Wash</button>
+                <button onClick={()=>setFace("data")} style={{padding:"8px 18px",borderRadius:10,fontWeight:800,fontSize:13,background:face==="data"?color+"22":T.bg3,color:face==="data"?color:T.dim,border:`1px solid ${face==="data"?color+"66":T.border}`}}>📈 Data</button>
               </div>
-              <span style={{fontSize:10,color:T.dim}}>Tap pill ↗ pour ouvrir</span>
+              {/* Chrono indicator */}
+              <div style={{display:"flex",alignItems:"center",gap:6}}>
+                {timerOn
+                  ? <div style={{fontFamily:"DM Mono",fontSize:14,fontWeight:800,color:T.green,animation:"tpulse 1s infinite"}}>{String(timerMins).padStart(2,"0")}:{String(timerSecs).padStart(2,"0")}</div>
+                  : <div style={{display:"flex",background:T.bg3,borderRadius:16,border:`1px solid ${T.border}`,overflow:"hidden"}}>
+                      <div style={{padding:"4px 10px",fontSize:10,fontWeight:800,color:T.danger,background:T.danger+"22"}}>OFF</div>
+                      <button onClick={()=>timer.start()} style={{padding:"4px 10px",fontSize:10,fontWeight:800,color:T.dim,background:"transparent"}}>ON</button>
+                    </div>
+                }
+                {timerOn&&<button onClick={()=>timer.stop()} style={{padding:"4px 10px",borderRadius:8,background:T.danger+"22",border:`1px solid ${T.danger}`,color:T.danger,fontSize:10,fontWeight:800}}>⏹</button>}
+              </div>
             </div>
-          )}
-          <Crd s={{marginBottom:14}}>
-            <STL icon="⚙" text="INFOS SESSION"/>
-            <BgSel label="Machine" value={sess.machine} onChange={v=>sF("machine",v)} options={MACHINES}/>
-            <Fld label="Strain">
-              <select value={sess.strain} onChange={e=>sF("strain",e.target.value)}>
-                <option value="">Sélectionner...</option>
-                {sNames.map(s=><option key={s}>{s}</option>)}
-              </select>
-            </Fld>
-            <Step label="Biomasse (kg)" value={parseFloat(sess.biomasse_kg)||0} onChange={v=>sF("biomasse_kg",v)} step={0.5} max={50} unit=" kg"/>
-            <Step label="Nombre de sacs" value={parseInt(sess.nb_sacs)||0} onChange={v=>sF("nb_sacs",v)} max={30}/>
-            <BgSel label="Type biomasse" value={sess.type_biomasse} onChange={v=>sF("type_biomasse",v)} options={["Fresh Frozen","Dry","Live"]}/>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-              <Fld label="Début"><input type="time" value={sess.heure_debut} onChange={e=>sF("heure_debut",e.target.value)}/></Fld>
-              <Fld label="Fin"><input type="time" value={sess.heure_fin} onChange={e=>sF("heure_fin",e.target.value)}/></Fld>
-            </div>
-            <Fld label="Notes"><textarea value={sess.notes} onChange={e=>sF("notes",e.target.value)} rows={2} style={{resize:"none"}}/></Fld>
-          </Crd>
-          <STL icon="💧" text="WASHES"/>
-          {sess.washes.map((w,i)=><WCard key={i} wash={w} open={aW===i} onToggle={()=>sAW(aW===i?null:i)} onChange={(k,v)=>sW(i,k,v)}/>)}
-          <div style={{marginTop:20,display:"flex",gap:10}}>
-            <BOL c="↺ Reset" onClick={()=>{setSess(eSess());localStorage.removeItem(LSK);}} col={T.danger}/>
-            <Btn c={saving?"Sauvegarde...":"🏮 Clôturer & Sécher"} onClick={save} disabled={saving}/>
+
+            {/* Face 2 — Wash */}
+            {face==="wash"&&(
+              <div style={{padding:"16px 18px"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+                  <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,color:color,letterSpacing:2}}>WASH EN COURS</span>
+                  <div style={{background:color+"22",border:`1px solid ${color}66`,borderRadius:10,padding:"6px 16px",fontFamily:"DM Mono",fontSize:20,fontWeight:800,color:color}}>W{curW}</div>
+                </div>
+                {prevWData?.micron&&(
+                  <div style={{background:T.bg3,borderRadius:12,padding:"10px 14px",marginBottom:12,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                    <span style={{fontSize:12,color:T.dim}}>Wash précédent</span>
+                    <div style={{display:"flex",gap:6}}>
+                      <Bdg col={T.dim}>W{curW-1}</Bdg>
+                      {prevWData.micron&&<Bdg col={T.dim}>{prevWData.micron}</Bdg>}
+                      {prevWData.couleur_45&&<Bdg col={T.dim}>{prevWData.couleur_45}</Bdg>}
+                    </div>
+                  </div>
+                )}
+                <div style={{background:T.bg3,borderRadius:12,padding:"12px 14px",marginBottom:16}}>
+                  <Fld label="Micron"><BgSel label="" value={curWData.micron} onChange={v=>sW(curW-1,"micron",v)} options={MICRONS}/></Fld>
+                  <Fld label="Glace"><BgSel label="" value={curWData.glace||"—"} onChange={v=>sW(curW-1,"glace",v)} options={GLACE}/></Fld>
+                  <Fld label="Vitesse"><BgSel label="" value={curWData.vitesse} onChange={v=>sW(curW-1,"vitesse",v)} options={VITESSES}/></Fld>
+                </div>
+                <div style={{display:"flex",gap:10}}>
+                  <button onClick={()=>{if(curW>1)sF("currentWash",curW-1);}} style={{flex:1,padding:"12px",borderRadius:12,background:T.bg3,border:`1px solid ${T.border}`,color:T.dim,fontWeight:700,fontSize:14}}>← W{curW-1}</button>
+                  <button onClick={()=>{if(curW<10)sF("currentWash",curW+1);}} style={{flex:1,padding:"12px",borderRadius:12,background:color+"22",border:`1px solid ${color}66`,color,fontWeight:700,fontSize:14}}>W{curW+1} →</button>
+                </div>
+              </div>
+            )}
+
+            {/* Face 3 — Data */}
+            {face==="data"&&(
+              <div style={{padding:"16px 18px"}}>
+                <div style={{marginBottom:14,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                  <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,color:color,letterSpacing:2}}>DATA W{curW}</span>
+                  <div style={{display:"flex",gap:6}}>
+                    {data.washes.filter(w=>w.micron).map(w=>(
+                      <button key={w.numero} onClick={()=>sF("currentWash",w.numero)} style={{padding:"4px 10px",borderRadius:8,background:curW===w.numero?color+"33":T.bg3,border:`1px solid ${curW===w.numero?color:T.border}`,color:curW===w.numero?color:T.dim,fontSize:11,fontWeight:700}}>W{w.numero}</button>
+                    ))}
+                  </div>
+                </div>
+                <BgSel label="Couleur 160µ" value={curWData.couleur_160} onChange={v=>sW(curW-1,"couleur_160",v)} options={COULEURS}/>
+                <BgSel label="Couleur 90µ"  value={curWData.couleur_90}  onChange={v=>sW(curW-1,"couleur_90",v)}  options={COULEURS}/>
+                <BgSel label="Couleur 45µ"  value={curWData.couleur_45}  onChange={v=>sW(curW-1,"couleur_45",v)}  options={COULEURS}/>
+                <BgSel label="Texture" value={curWData.texture} onChange={v=>sW(curW-1,"texture",v)} options={TEXTURES}/>
+                <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
+                  <button onClick={()=>sW(curW-1,"contaminants",!curWData.contaminants)} style={{width:28,height:28,borderRadius:8,border:`2px solid ${curWData.contaminants?T.danger:T.border}`,background:curWData.contaminants?T.danger+"33":"transparent"}}>{curWData.contaminants&&<span style={{color:T.danger}}>✓</span>}</button>
+                  <span style={{fontSize:14,color:curWData.contaminants?T.danger:T.dim}}>Contaminants</span>
+                </div>
+                <Fld label="Notes"><textarea value={curWData.notes||""} onChange={e=>sW(curW-1,"notes",e.target.value)} rows={2} style={{resize:"none"}}/></Fld>
+                <div style={{borderTop:`1px solid ${T.border}`,paddingTop:14,marginTop:6}}>
+                  <Btn c={saving?"Sauvegarde...":"💾 Fin de session — Sauvegarder"} onClick={saveSession} disabled={saving} col={T.green}/>
+                </div>
+              </div>
+            )}
           </div>
-        </>
+        </div>
       )}
-    </div>
+    </>
   );
 };
 
-const WCard=({wash,open,onToggle,onChange})=>{
-  const has=wash.micron||wash.couleur_45;
-  return(
-    <div style={{marginBottom:8}}>
-      <button onClick={onToggle} style={{width:"100%",background:open?T.bg3:T.card,border:`1px solid ${has?T.orange+"66":T.border}`,borderRadius:open?"12px 12px 0 0":12,padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",color:T.white}}>
-        <div style={{display:"flex",alignItems:"center",gap:8}}>
-          <span style={{fontFamily:"DM Mono",fontWeight:800,color:has?T.orange:T.dim}}>W{wash.numero}</span>
-          {wash.micron&&<Bdg>{wash.micron}</Bdg>}
-          {wash.couleur_45&&<Bdg col={T.dim}>{wash.couleur_45}</Bdg>}
-          {wash.contaminants&&<Bdg col={T.danger}>⚠</Bdg>}
-        </div>
-        <span style={{color:T.dim}}>{open?"▲":"▼"}</span>
-      </button>
-      {open&&(
-        <div style={{background:T.bg3,border:`1px solid ${T.orange+"44"}`,borderTop:"none",borderRadius:"0 0 12px 12px",padding:16}}>
-          <BgSel label="Micron" value={wash.micron} onChange={v=>onChange("micron",v)} options={MICRONS}/>
-          <BgSel label="Glace" value={wash.glace||"—"} onChange={v=>onChange("glace",v)} options={GLACE}/>
-          <BgSel label="Vitesse" value={wash.vitesse} onChange={v=>onChange("vitesse",v)} options={VITESSES}/>
-          <Fld label="Durée (min)"><select value={wash.duree_min} onChange={e=>onChange("duree_min",parseInt(e.target.value))}>{[5,10,15,20,24,25,30].map(d=><option key={d} value={d}>{d} min</option>)}</select></Fld>
-          <BgSel label="Couleur 160µ" value={wash.couleur_160} onChange={v=>onChange("couleur_160",v)} options={COULEURS}/>
-          <BgSel label="Couleur 90µ" value={wash.couleur_90} onChange={v=>onChange("couleur_90",v)} options={COULEURS}/>
-          <BgSel label="Couleur 45µ" value={wash.couleur_45} onChange={v=>onChange("couleur_45",v)} options={COULEURS}/>
-          <BgSel label="Texture" value={wash.texture} onChange={v=>onChange("texture",v)} options={TEXTURES}/>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
-            <div style={{display:"flex",alignItems:"center",gap:10}}>
-              <button onClick={()=>onChange("contaminants",!wash.contaminants)} style={{width:28,height:28,borderRadius:8,border:`2px solid ${wash.contaminants?T.danger:T.border}`,background:wash.contaminants?T.danger+"33":"transparent"}}>{wash.contaminants&&<span style={{color:T.danger}}>✓</span>}</button>
-              <span style={{fontSize:14,color:wash.contaminants?T.danger:T.dim}}>Contaminants</span>
-            </div>
-            <button onClick={()=>onChange("potentiel_wash_plus",!wash.potentiel_wash_plus)} style={{padding:"6px 14px",borderRadius:8,fontSize:12,fontWeight:700,background:wash.potentiel_wash_plus?T.green+"33":T.bg,border:`1.5px solid ${wash.potentiel_wash_plus?T.green:T.border}`,color:wash.potentiel_wash_plus?T.green:T.dim}}>+ Wash suivant ?</button>
-          </div>
-          <Fld label="Notes"><textarea value={wash.notes} onChange={e=>onChange("notes",e.target.value)} rows={2} style={{resize:"none"}}/></Fld>
-        </div>
-      )}
-    </div>
-  );
-};
+const Session=({strains})=>(
+  <div style={{padding:"0 14px",paddingBottom:100,animation:"fadeIn 0.3s"}}>
+    <STL icon="🏮" text="SESSIONS EN COURS"/>
+    {MACHINES.map(m=><MachineCard key={m} machine={m} strains={strains}/>)}
+  </div>
+);
+
+
 
 // ── CALENDRIER ────────────────────────────────────────────────────────────────
 const Calendrier=()=>{
