@@ -29,7 +29,7 @@ const SC = ["#C0392B","#E67E22","#27AE60","#2471A3","#7D3C98","#E91E8C","#1ABC9C
 const T = { bg:"#06060F",bg2:"#0A0A18",bg3:"#0E0E22",card:"#0B0B1A",border:"#1C1C3A",orange:"#C0392B",gold:"#D4A843",green:"#27AE60",white:"#EAE8F0",dim:"#4A4A7A",ink:"#8080B0",danger:"#E74C3C",aura:"#FFD700",purple:"#7D3C98" };
 
 const CSS = `
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,600;0,700;0,800;0,900;1,800;1,900&family=DM+Mono:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,600;0,700;0,800;0,900;1,800;1,900&family=DM+Mono:wght@400;500;700&family=Bebas+Neue&display=swap');
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body,#root{background:#06060F;color:#EAE8F0;font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden;}
 ::-webkit-scrollbar{width:2px;} ::-webkit-scrollbar-thumb{background:#1C1C3A;}
@@ -213,18 +213,16 @@ const AppHeader=()=>{
   const[t,sT]=useState(new Date());
   useEffect(()=>{const i=setInterval(()=>sT(new Date()),60000);return()=>clearInterval(i);},[]);
   return(
-    <div style={{background:`linear-gradient(180deg,${T.bg2},${T.bg2}CC)`,padding:"10px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:50,backdropFilter:"blur(20px)",borderBottom:`1px solid ${T.border}`}}>
-      <div style={{display:"flex",alignItems:"center",gap:10}}>
-        <span style={{fontSize:22}}>🫛</span>
-        <div>
-          <div style={{display:"flex",alignItems:"baseline",gap:2}}>
-            <span className="nt" style={{fontSize:20,fontWeight:900,fontStyle:"italic",color:T.white,letterSpacing:-1,textShadow:`0 0 20px ${T.orange}66,2px 2px 0 ${T.orange}`}}>SENZU</span>
-            <span style={{fontSize:20,fontWeight:300,color:T.orange,letterSpacing:5,marginLeft:4}}>ASIA</span>
-          </div>
-          <div style={{fontSize:7,color:T.dim,letterSpacing:"0.2em",textTransform:"uppercase"}}>Ice Water Hash Lab</div>
+    <div style={{background:`linear-gradient(180deg,${T.bg2},${T.bg2}CC)`,padding:"12px 20px",display:"flex",alignItems:"center",justifyContent:"center",position:"sticky",top:0,zIndex:50,backdropFilter:"blur(20px)",borderBottom:`1px solid ${T.border}`}}>
+      <div style={{position:"absolute",left:16,top:"50%",transform:"translateY(-50%)",fontSize:24}}>🫛</div>
+      <div style={{textAlign:"center"}}>
+        <div style={{display:"flex",alignItems:"baseline",gap:6,justifyContent:"center"}}>
+          <span className="nt" style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:30,fontWeight:400,color:T.white,letterSpacing:3,textShadow:`0 0 16px ${T.orange}88,0 0 4px ${T.orange}`}}>SENZU</span>
+          <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:30,fontWeight:400,color:T.orange,letterSpacing:8}}>ASIA</span>
         </div>
+        <div style={{fontSize:7,color:T.dim,letterSpacing:"0.35em",textTransform:"uppercase",marginTop:-3}}>Ice Water Hash Lab</div>
       </div>
-      <div style={{textAlign:"right"}}>
+      <div style={{position:"absolute",right:16,top:"50%",transform:"translateY(-50%)",textAlign:"right"}}>
         <div style={{fontSize:9,color:T.dim,fontFamily:"DM Mono"}}>{t.toLocaleDateString("fr-FR",{day:"2-digit",month:"short",year:"numeric"})}</div>
         <div style={{fontSize:9,color:T.green}}>● Lab actif</div>
       </div>
@@ -262,13 +260,13 @@ const BgSel=({label,value,onChange,options})=>(
 );
 const Load=()=><div style={{display:"flex",justifyContent:"center",alignItems:"center",height:200}}><div style={{color:T.orange,fontSize:32,animation:"tpulse 1s infinite"}}>🏮</div></div>;
 
-const KPI=({label,value,col=T.orange,detail})=>{
+const KPI=({label,value,col=T.orange,detail,framed})=>{
   const[open,sO]=useState(false);
   return(
-    <div onClick={()=>detail&&sO(x=>!x)} style={{background:T.card,border:`1px solid ${open?col+"66":T.border}`,borderRadius:14,padding:"16px 18px",flex:1,cursor:detail?"pointer":"default",position:"relative",overflow:"hidden"}}>
-      <div style={{position:"absolute",top:-16,right:-16,width:64,height:64,borderRadius:"50%",background:`radial-gradient(circle,${col}18,transparent)`}}/>
+    <div onClick={()=>detail&&sO(x=>!x)} style={{background:framed?T.card:"transparent",border:framed?`2px solid ${open?col:col+"66"}`:"none",borderRadius:14,padding:framed?"18px 20px":"10px 4px",flex:1,cursor:detail?"pointer":"default",position:"relative",overflow:"hidden"}}>
+      {framed&&<div style={{position:"absolute",top:-16,right:-16,width:64,height:64,borderRadius:"50%",background:`radial-gradient(circle,${col}22,transparent)`}}/>}
       <div style={{fontSize:9,color:T.dim,textTransform:"uppercase",letterSpacing:"0.12em",marginBottom:6}}>{label}</div>
-      <div style={{fontSize:32,fontWeight:800,color:col,fontFamily:"DM Mono",lineHeight:1}}>{value??'—'}</div>
+      <div style={{fontSize:framed?38:32,fontWeight:800,color:col,fontFamily:"DM Mono",lineHeight:1}}>{value??'—'}</div>
       {detail&&<div style={{fontSize:9,color:T.dim,marginTop:4}}>{open?"▲ Fermer":"▼ Détails"}</div>}
       {open&&detail&&<div style={{marginTop:12,borderTop:`1px solid ${T.border}`,paddingTop:12}}>{detail}</div>}
     </div>
@@ -322,6 +320,15 @@ const Dashboard=()=>{
   },[washes,sessions]);
   const mos=[...new Set(washes.map(w=>{const s=sessions.find(x=>x.id===w.session_id);return s?.date?.slice(0,7);}).filter(Boolean))].sort();
 
+  // ISO week number from date string
+  const weekOf=(ds)=>{const d=new Date(ds+"T12:00:00");const oneJan=new Date(d.getFullYear(),0,1);const days=Math.floor((d-oneJan)/86400000);return `S${Math.ceil((days+oneJan.getDay()+1)/7)}`;};
+  const weekWashData=useMemo(()=>{
+    const m={};
+    washes.forEach(w=>{const se=sessions.find(s=>s.id===w.session_id);if(!se?.date)return;const st=se.strain||"?";const wk=weekOf(se.date);if(!m[st])m[st]={};m[st][wk]=(m[st][wk]||0)+1;});
+    return m;
+  },[washes,sessions]);
+  const weeks=[...new Set(washes.map(w=>{const s=sessions.find(x=>x.id===w.session_id);return s?.date?weekOf(s.date):null;}).filter(Boolean))].sort((a,b)=>parseInt(a.slice(1))-parseInt(b.slice(1)));
+
   const getR=(nom)=>{const se=sessions.filter(s=>s.strain===nom);const pe=pesees.filter(p=>se.find(s=>s.id===p.session_id));const b=se.reduce((a,s)=>a+(parseFloat(s.biomasse_kg)||0),0);const po=pe.reduce((a,p)=>a+(parseFloat(p.poids_sec_g)||0),0);return b>0?((po/(b*1000))*100).toFixed(2):null;};
 
   const selSt=sel?uStr.find(s=>(s.nom||s)===sel):null;
@@ -334,9 +341,9 @@ const Dashboard=()=>{
         <KPI label="Sessions" value={sessions.length} col={T.orange}/>
         <KPI label="Washes" value={washes.length} col={T.gold}/>
       </div>
-      <div style={{display:"flex",gap:10,marginBottom:22}}>
+      <div style={{display:"flex",gap:10,marginBottom:22,alignItems:"flex-start"}}>
         <KPI label="Biomasse" value={`${totBio.toFixed(1)}kg`} col={T.green}/>
-        <KPI label="Rendement moy." value={rendM?`${rendM}%`:"—"} col={T.purple}
+        <KPI label="Rendement moy." value={rendM?`${rendM}%`:"—"} col={T.purple} framed
           detail={<div>{rendBS.filter(r=>r.rend!=="—").map(r=><div key={r.nom} style={{display:"flex",justifyContent:"space-between",marginBottom:4}}><span style={{fontSize:12,color:T.ink}}>{r.nom}</span><span style={{fontSize:12,fontWeight:700,color:T.gold,fontFamily:"DM Mono"}}>{r.rend}%</span></div>)}<div style={{fontSize:9,color:T.dim,marginTop:6}}>Basé sur {rendBS.filter(r=>r.rend!=="—").length} strain(s)</div></div>}
         />
       </div>
@@ -368,41 +375,55 @@ const Dashboard=()=>{
 
       <Crd>
         <STL icon="📊" text="ANALYSE WASHES"/>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-          <div>
-            <div style={{fontSize:9,color:T.dim,marginBottom:8}}>Washes / mois</div>
-            {Object.keys(sWD).slice(0,5).map((strain,i)=>{
-              const c=SC[i%SC.length],data=mos.map(m=>sWD[strain]?.[m]||0),max=Math.max(...data,1);
-              return(
-                <div key={strain} style={{marginBottom:10}}>
-                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
-                    <span style={{fontSize:10,color:c,fontWeight:700}}>{strain}</span>
-                    <span style={{fontSize:10,color:T.dim}}>{data.reduce((a,v)=>a+v,0)}W</span>
+        <div style={{fontSize:9,color:T.dim,marginBottom:6,letterSpacing:"0.1em",textTransform:"uppercase"}}>Washes par strain / semaine</div>
+        {(()=>{
+          const strainsList=Object.keys(weekWashData).slice(0,6);
+          const W=320,H=120,PAD=24;
+          const maxV=Math.max(1,...strainsList.flatMap(st=>weeks.map(wk=>weekWashData[st]?.[wk]||0)));
+          const xStep=weeks.length>1?(W-PAD*2)/(weeks.length-1):0;
+          const xy=(vi,val)=>[PAD+vi*xStep, H-PAD-((val/maxV)*(H-PAD*2))];
+          const smooth=(pts)=>{
+            if(pts.length<2)return pts.map(p=>`${p[0]},${p[1]}`).join(" ");
+            let d=`M ${pts[0][0]},${pts[0][1]}`;
+            for(let i=0;i<pts.length-1;i++){const[x0,y0]=pts[i],[x1,y1]=pts[i+1];const cx=(x0+x1)/2;d+=` C ${cx},${y0} ${cx},${y1} ${x1},${y1}`;}
+            return d;
+          };
+          return(
+            <div style={{width:"100%",overflowX:"auto"}}>
+              <svg viewBox={`0 0 ${W} ${H}`} style={{width:"100%",minWidth:280,height:140}}>
+                {[0,0.5,1].map(g=>(<line key={g} x1={PAD} y1={H-PAD-g*(H-PAD*2)} x2={W-PAD} y2={H-PAD-g*(H-PAD*2)} stroke={T.border} strokeWidth="0.5"/>))}
+                {strainsList.map((st,i)=>{
+                  const c=SC[i%SC.length];
+                  const pts=weeks.map((wk,vi)=>xy(vi,weekWashData[st]?.[wk]||0));
+                  return(<g key={st}>
+                    <path d={smooth(pts)} fill="none" stroke={c} strokeWidth="2.5" strokeLinecap="round"/>
+                    {pts.map((p,pi)=><circle key={pi} cx={p[0]} cy={p[1]} r="2.5" fill={c}/>)}
+                  </g>);
+                })}
+                {weeks.map((wk,vi)=>(<text key={wk} x={PAD+vi*xStep} y={H-6} fill={T.dim} fontSize="7" textAnchor="middle" fontFamily="DM Mono">{wk}</text>))}
+              </svg>
+              <div style={{display:"flex",gap:14,justifyContent:"center",marginTop:4}}>
+                {strainsList.map((st,i)=>(
+                  <div key={st} style={{display:"flex",alignItems:"center",gap:5}}>
+                    <div style={{width:10,height:3,borderRadius:2,background:SC[i%SC.length]}}/>
+                    <span style={{fontSize:11,color:T.ink,fontWeight:600}}>{st}</span>
                   </div>
-                  <div style={{display:"flex",gap:2,alignItems:"flex-end",height:28}}>
-                    {mos.map((m,mi)=>(
-                      <div key={m} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:1}}>
-                        <div style={{width:"100%",height:data[mi]>0?`${Math.max(4,(data[mi]/max)*24)}px`:"3px",background:data[mi]>0?c:T.border+"44",borderRadius:"2px 2px 0 0"}}/>
-                        <div style={{fontSize:7,color:T.dim}}>{m.slice(5)}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          <div>
-            <div style={{fontSize:9,color:T.dim,marginBottom:8}}>Classement</div>
-            {wBS.map(([nom,cnt],i)=>(
-              <div key={nom} style={{marginBottom:8}}>
-                <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
-                  <span style={{fontSize:10,color:T.white}}>{nom}</span>
-                  <span style={{fontSize:10,color:SC[i%SC.length],fontWeight:700,fontFamily:"DM Mono"}}>{cnt}</span>
-                </div>
-                <div style={{height:3,background:T.border,borderRadius:2}}><div style={{height:"100%",width:`${(cnt/maxW)*100}%`,background:SC[i%SC.length],borderRadius:2,transition:"width 0.5s"}}/></div>
+                ))}
               </div>
-            ))}
-          </div>
+            </div>
+          );
+        })()}
+        <div style={{borderTop:`1px solid ${T.border}`,marginTop:14,paddingTop:14}}>
+          <div style={{fontSize:9,color:T.dim,marginBottom:8,letterSpacing:"0.1em",textTransform:"uppercase"}}>Classement total</div>
+          {wBS.map(([nom,cnt],i)=>(
+            <div key={nom} style={{marginBottom:8}}>
+              <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+                <span style={{fontSize:12,color:T.white}}>{nom}</span>
+                <span style={{fontSize:12,color:SC[i%SC.length],fontWeight:700,fontFamily:"DM Mono"}}>{cnt}W</span>
+              </div>
+              <div style={{height:4,background:T.border,borderRadius:2}}><div style={{height:"100%",width:`${(cnt/maxW)*100}%`,background:SC[i%SC.length],borderRadius:2,transition:"width 0.5s"}}/></div>
+            </div>
+          ))}
         </div>
       </Crd>
 
