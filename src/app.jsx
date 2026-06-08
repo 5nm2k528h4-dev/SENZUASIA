@@ -1048,7 +1048,7 @@ const CatalogueModal=({sel,selSt,selC,sessions,pesees,getR,fRef,upload,editing,s
           <button onClick={()=>{sSel(null);sEd(null);}} style={{position:"absolute",top:14,left:14,width:34,height:34,borderRadius:10,background:"#00000066",backdropFilter:"blur(8px)",border:`1px solid ${T.border}`,color:T.white,fontSize:16,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
           {/* 📷 Photo haut droite — label pour fix iPad */}
           <label htmlFor={inputId} style={{position:"absolute",top:14,right:14,background:"#00000066",backdropFilter:"blur(8px)",border:`1px solid ${selC}`,borderRadius:10,padding:"7px 14px",color:selC,fontWeight:700,fontSize:12,cursor:"pointer"}}>📷 Photo</label>
-          <input id={inputId} type="file" accept="image/*" capture="environment" onChange={e=>upload(e,sel)} style={{display:"none"}}/>
+          <input id={inputId} type="file" accept="image/*" onChange={e=>upload(e,sel)} style={{display:"none"}}/>
           {/* Nom + génétique en bas */}
           <div style={{position:"absolute",bottom:14,left:16,right:16}}>
             <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
@@ -1237,28 +1237,72 @@ const CatalogueSection=()=>{
 
       {/* Formulaire pesées */}
       {showP&&(
-        <div style={{background:T.bg2,border:`1px solid ${T.gold}33`,borderRadius:14,padding:16,marginBottom:14}}>
-          <div style={{fontSize:10,color:T.gold,fontWeight:800,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:12}}>⚖ Pesées Freeze Dryer</div>
-          <Fld label="Strain"><select value={nP.strain} onChange={e=>sNP(x=>({...x,strain:e.target.value}))}><option value="">Sélectionner...</option>{allSt.map(s=><option key={s.nom||s}>{s.nom||s}</option>)}</select></Fld>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-            <Fld label="90µ (g)">
-              <div style={{display:"flex",alignItems:"center",gap:6}}>
-                <button onClick={()=>sNP(x=>({...x,m90:Math.max(0,parseFloat(x.m90||0)-0.1).toFixed(1)}))} style={{width:36,height:36,borderRadius:8,background:T.bg3,border:`1px solid ${T.border}`,color:T.white,fontSize:18,fontWeight:700,flexShrink:0}}>−</button>
-                <input type="number" value={nP.m90} onChange={e=>sNP(x=>({...x,m90:e.target.value}))} style={{textAlign:"center",fontSize:18,fontWeight:800,color:T.orange,fontFamily:"DM Mono"}} min="0" step="0.1"/>
-                <button onClick={()=>sNP(x=>({...x,m90:parseFloat((parseFloat(x.m90||0)+0.1).toFixed(1))}))} style={{width:36,height:36,borderRadius:8,background:T.orange,color:"#fff",fontSize:18,fontWeight:700,flexShrink:0}}>+</button>
+        <div style={{background:T.bg2,border:`1px solid ${T.gold}33`,borderRadius:14,padding:14,marginBottom:14}}>
+          {/* Layout horizontal : formulaire gauche + camembert droite */}
+          <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:12,alignItems:"start"}}>
+            {/* Formulaire gauche */}
+            <div>
+              <div style={{fontSize:10,color:T.gold,fontWeight:800,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10,textAlign:"center"}}>⚖ Pesées Freeze Dryer</div>
+              <div style={{marginBottom:8}}>
+                <div style={{fontSize:9,color:T.dim,textAlign:"center",marginBottom:4,letterSpacing:"0.08em",textTransform:"uppercase"}}>Strain</div>
+                <select value={nP.strain} onChange={e=>sNP(x=>({...x,strain:e.target.value}))} style={{fontSize:12,padding:"8px 10px"}}>
+                  <option value="">Sélectionner...</option>
+                  {allSt.map(s=><option key={s.nom||s}>{s.nom||s}</option>)}
+                </select>
               </div>
-            </Fld>
-            <Fld label="45µ / FS (g)">
-              <div style={{display:"flex",alignItems:"center",gap:6}}>
-                <button onClick={()=>sNP(x=>({...x,m45:Math.max(0,parseFloat(x.m45||0)-0.1).toFixed(1)}))} style={{width:36,height:36,borderRadius:8,background:T.bg3,border:`1px solid ${T.border}`,color:T.white,fontSize:18,fontWeight:700,flexShrink:0}}>−</button>
-                <input type="number" value={nP.m45} onChange={e=>sNP(x=>({...x,m45:e.target.value}))} style={{textAlign:"center",fontSize:18,fontWeight:800,color:T.orange,fontFamily:"DM Mono"}} min="0" step="0.1"/>
-                <button onClick={()=>sNP(x=>({...x,m45:parseFloat((parseFloat(x.m45||0)+0.1).toFixed(1))}))} style={{width:36,height:36,borderRadius:8,background:T.orange,color:"#fff",fontSize:18,fontWeight:700,flexShrink:0}}>+</button>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                {[["90µ (g)","m90"],["45µ / FS (g)","m45"]].map(([lbl,key])=>(
+                  <div key={key}>
+                    <div style={{fontSize:9,color:T.dim,textAlign:"center",marginBottom:4,letterSpacing:"0.08em",textTransform:"uppercase"}}>{lbl}</div>
+                    <div style={{display:"flex",alignItems:"center",gap:4}}>
+                      <button onClick={()=>sNP(x=>({...x,[key]:Math.max(0,parseFloat(x[key]||0)-0.1).toFixed(1)}))} style={{width:30,height:30,borderRadius:7,background:T.bg3,border:`1px solid ${T.border}`,color:T.white,fontSize:16,fontWeight:700,flexShrink:0}}>−</button>
+                      <input type="number" value={nP[key]} onChange={e=>sNP(x=>({...x,[key]:e.target.value}))} style={{textAlign:"center",fontSize:15,fontWeight:800,color:T.orange,fontFamily:"DM Mono",padding:"6px 2px"}} min="0" step="0.1"/>
+                      <button onClick={()=>sNP(x=>({...x,[key]:parseFloat((parseFloat(x[key]||0)+0.1).toFixed(1))}))} style={{width:30,height:30,borderRadius:7,background:T.orange,color:"#fff",fontSize:16,fontWeight:700,flexShrink:0}}>+</button>
+                    </div>
+                  </div>
+                ))}
               </div>
-            </Fld>
-          </div>
-          <div style={{display:"flex",gap:8,marginTop:4}}>
-            <button onClick={()=>sShP(false)} style={{flex:1,padding:"10px",borderRadius:10,background:"transparent",border:`1px solid ${T.border}`,color:T.dim,fontWeight:600,fontSize:13}}>Annuler</button>
-            <button onClick={addPesee} disabled={saving} style={{flex:1,padding:"10px",borderRadius:10,background:T.gold,color:"#000",fontWeight:800,fontSize:13,opacity:saving?0.5:1}}>{saving?"...":"💾 Sauvegarder"}</button>
+              <div style={{display:"flex",gap:6,marginTop:10}}>
+                <button onClick={()=>sShP(false)} style={{flex:1,padding:"8px",borderRadius:8,background:"transparent",border:`1px solid ${T.border}`,color:T.dim,fontWeight:600,fontSize:12}}>Annuler</button>
+                <button onClick={addPesee} disabled={saving} style={{padding:"8px 16px",borderRadius:8,background:T.gold,color:"#000",fontWeight:800,fontSize:18,opacity:saving?0.5:1}}>💾</button>
+              </div>
+            </div>
+            {/* Camembert droite — rendements 90µ vs 45µ */}
+            {(()=>{
+              const total=allSt.reduce((acc,s)=>{
+                const se=sessions.filter(x=>x.strain===(s.nom||s));
+                const pe=pesees.filter(p=>se.find(x=>x.id===p.session_id));
+                pe.forEach(p=>{acc[p.micron]=(acc[p.micron]||0)+(parseFloat(p.poids_sec_g)||0);});
+                return acc;
+              },{});
+              const v90=total["90µ"]||0,v45=total["45µ"]||0,tot=(v90+v45)||1;
+              const pct90=v90/tot,pct45=v45/tot;
+              const a90=pct90*2*Math.PI,a45=pct45*2*Math.PI;
+              const R=42,cx=50,cy=50;
+              const x1=cx+R*Math.sin(0),y1=cy-R*Math.cos(0);
+              const x2=cx+R*Math.sin(a90),y2=cy-R*Math.cos(a90);
+              const lg=a90>Math.PI?1:0;
+              return(
+                <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:8,paddingTop:22}}>
+                  <svg width="100" height="100" viewBox="0 0 100 100">
+                    {v90>0&&v45>0?(
+                      <>
+                        <path d={`M ${cx} ${cy} L ${x1} ${y1} A ${R} ${R} 0 ${lg} 1 ${x2} ${y2} Z`} fill={T.orange} opacity="0.9"/>
+                        <path d={`M ${cx} ${cy} L ${x2} ${y2} A ${R} ${R} 0 ${1-lg} 1 ${x1} ${y1} Z`} fill={T.gold} opacity="0.9"/>
+                      </>
+                    ):(
+                      <circle cx={cx} cy={cy} r={R} fill={v90>0?T.orange:T.gold} opacity="0.9"/>
+                    )}
+                    <circle cx={cx} cy={cy} r={22} fill={T.bg2}/>
+                    <text x={cx} y={cy+5} textAnchor="middle" fontSize="11" fontWeight="800" fontFamily="DM Mono" fill={T.white}>{tot.toFixed(0)}g</text>
+                  </svg>
+                  <div style={{display:"flex",gap:8}}>
+                    <div style={{display:"flex",alignItems:"center",gap:4}}><div style={{width:8,height:8,borderRadius:2,background:T.orange}}/><span style={{fontSize:9,color:T.dim}}>90µ {v90>0?v90.toFixed(0)+"g":"—"}</span></div>
+                    <div style={{display:"flex",alignItems:"center",gap:4}}><div style={{width:8,height:8,borderRadius:2,background:T.gold}}/><span style={{fontSize:9,color:T.dim}}>45µ {v45>0?v45.toFixed(0)+"g":"—"}</span></div>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </div>
       )}
@@ -1278,10 +1322,6 @@ const CatalogueSection=()=>{
                   {typeProd&&<span style={{background:typeProd==="WPFF"?"#1a3a2a":"#2a1a0a",color:typeProd==="WPFF"?"#4ade80":T.gold,border:`1px solid ${typeProd==="WPFF"?"#4ade8044":T.gold+"44"}`,borderRadius:5,padding:"2px 7px",fontSize:9,fontWeight:800,letterSpacing:"0.05em"}}>{typeProd==="WPFF"?"🧊 WPFF":"🔥 ROSIN"}</span>}
                   {rec&&<span style={{background:T.aura,color:"#000",borderRadius:5,padding:"2px 7px",fontSize:9,fontWeight:800}}>★ REC</span>}
                 </div>
-                {/* Rendement overlay bas droite */}
-                {r&&<div style={{position:"absolute",bottom:8,right:8,background:"#00000088",backdropFilter:"blur(8px)",borderRadius:8,padding:"4px 10px"}}>
-                  <div style={{fontSize:18,fontWeight:800,fontFamily:"DM Mono",color:rec?T.aura:c,lineHeight:1,animation:rec?"rglow 2s infinite":"none"}}>{r}%</div>
-                </div>}
                 {/* Gradient bas */}
                 <div style={{position:"absolute",bottom:0,left:0,right:0,height:50,background:"linear-gradient(0deg,#0B0B1AEE,transparent)"}}/>
               </div>
