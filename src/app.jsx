@@ -1040,8 +1040,7 @@ const CatalogueModal=({sel,selSt,selC,sessions,pesees,getR,fRef,upload,editing,s
       <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:768,background:T.bg2,border:`1px solid ${selC}55`,borderRadius:"20px 20px 0 0",maxHeight:"92vh",overflowY:"auto",animation:"dup 0.3s ease",paddingBottom:"max(24px,env(safe-area-inset-bottom))"}}>
 
         {/* ── Zone photo header ── */}
-        <div style={{height:300,background:selSt.photo_url?`url(${selSt.photo_url}) center/contain no-repeat`:`linear-gradient(160deg,${selC}33,${T.bg3})`,position:"relative",borderRadius:"20px 20px 0 0",overflow:"hidden",backgroundColor:T.bg}}>
-          {!selSt.photo_url&&<div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:80,opacity:0.08}}>🌿</div>}
+        <div style={{height:320,background:selSt.photo_url?`url(${selSt.photo_url}) center/cover`:`linear-gradient(160deg,${selC}33,${T.bg3})`,position:"relative",borderRadius:"20px 20px 0 0",overflow:"hidden"}}>          {!selSt.photo_url&&<div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:80,opacity:0.08}}>🌿</div>}
           {/* Gradient bas */}
           <div style={{position:"absolute",bottom:0,left:0,right:0,height:100,background:"linear-gradient(0deg,#0A0A18,transparent)"}}/>
           {/* ✕ Fermer haut gauche */}
@@ -1315,7 +1314,7 @@ const CatalogueSection=()=>{
           return(
             <div key={nom} onClick={()=>sSel(nom)} style={{borderRadius:14,overflow:"hidden",cursor:"pointer",background:T.card,border:`1px solid ${rec?T.aura+"66":T.border}`,boxShadow:rec?`0 0 20px ${T.aura}22`:"none",transition:"all 0.2s"}}>
               {/* Zone photo */}
-              <div style={{height:130,position:"relative",background:s.photo_url?`url(${s.photo_url}) center/cover`:`linear-gradient(160deg,${c}22,${T.bg3})`}}>
+              <div style={{height:200,position:"relative",background:s.photo_url?`url(${s.photo_url}) center/cover`:`linear-gradient(160deg,${c}22,${T.bg3})`}}>
                 {!s.photo_url&&<div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:36,opacity:0.12}}>🌿</div>}
                 {/* Badges overlay */}
                 <div style={{position:"absolute",top:8,left:8,display:"flex",gap:4,flexWrap:"wrap"}}>
