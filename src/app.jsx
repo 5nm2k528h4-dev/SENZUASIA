@@ -21,7 +21,8 @@ const MS = { "Machine 1":"M1","Machine 2":"M2","Machine 3":"M3" };
 const MC = { "Machine 1":"#C0392B","Machine 2":"#2471A3","Machine 3":"#7D3C98" };
 const MICRONS = ["220µ","160µ","90µ","45µ","25µ","FS"];
 const GLACE = ["—","1/4 cruche","1/2 cruche","1 cruche","1/3 sac","1/2 sac","1 sac"];
-const CURES = ["Freeze Dry","Air Dry","Fresh Press"];
+const CURES = ["FreezeDryer"];
+const TYPES_BIOMASSE = ["WPFF","Live Rosin"];
 const DMINS = Array.from({length:60},(_,i)=>i+1);
 const TINIT = { duree:15, remaining:null, running:false, done:false, startedAt:null };
 const SC = ["#C0392B","#E67E22","#27AE60","#2471A3","#7D3C98","#E91E8C","#1ABC9C","#D4A843","#E74C3C","#16A085"];
@@ -102,7 +103,7 @@ const useTimer = (machine) => {
 };
 
 const Wheel=({value,onChange,color})=>{
-  const H=44,V=3,sY=useRef(0),sI=useRef(0);
+  const H=44,V=2,sY=useRef(0),sI=useRef(0);
   const[idx,setIdx]=useState(Math.max(0,DMINS.indexOf(value)));
   const cl=(v)=>Math.max(0,Math.min(DMINS.length-1,v));
   const ap=(i)=>{const c=cl(i);setIdx(c);onChange(DMINS[c]);};
@@ -115,7 +116,7 @@ const Wheel=({value,onChange,color})=>{
         style={{height:H*(V*2+1)}}>
         <div className="wi" style={{transform:`translateY(${off}px)`,transition:"transform 0.1s"}}>
           {Array.from({length:V}).map((_,i)=><div key={"t"+i} className="witem" style={{height:H,opacity:0}}>—</div>)}
-          {DMINS.map((v,i)=>{const d=Math.abs(i-idx);return<div key={v} className="witem" onClick={()=>ap(i)} style={{height:H,color:d===0?color:T.dim,fontSize:d===0?26:d===1?18:14,opacity:d===0?1:d===1?0.5:0.15}}>{String(v).padStart(2,"0")} min</div>;})}
+          {DMINS.map((v,i)=>{const d=Math.abs(i-idx);return<div key={v} className="witem" onClick={()=>ap(i)} style={{height:H,color:d===0?color:T.dim,fontSize:d===0?28:d===1?18:14,opacity:d===0?1:d===1?0.4:0.15,fontWeight:d===0?800:400}}>{String(v).padStart(2,"0")} min</div>;})}
           {Array.from({length:V}).map((_,i)=><div key={"b"+i} className="witem" style={{height:H,opacity:0}}>—</div>)}
         </div>
         <div className="wft"/><div className="wfb"/><div className="wsel"/>
@@ -278,14 +279,24 @@ const TYPES_PRODUIT=["WPFF","Live Rosin"];
 const StrainTypeField=({strainNom,color})=>{
   const[type,setType]=useState(null);
   const[saving,setSaving]=useState(false);
-  useEffect(()=>{sbFetch(`strains?nom=eq.${encodeURIComponent(strainNom)}&select=type_produit`).then(d=>{if(d?.[0]) setType(d[0].type_produit||null);}).catch(()=>{});},[strainNom]);
-  const save=async(v)=>{setType(v);setSaving(true);try{await sbFetch(`strains?nom=eq.${encodeURIComponent(strainNom)}`,{method:"PATCH",prefer:"return=minimal",body:JSON.stringify({type_produit:v})});}catch(e){}finally{setSaving(false);}};
+  useEffect(()=>{
+    sbFetch(`strains?nom=eq.${encodeURIComponent(strainNom)}&select=type_produit`)
+      .then(d=>{if(d?.[0]) setType(d[0].type_produit||null);}).catch(()=>{});
+  },[strainNom]);
+  const save=async(v)=>{
+    setType(v);setSaving(true);
+    try{
+      const ex=await sbFetch(`strains?nom=eq.${encodeURIComponent(strainNom)}&select=id`);
+      if(ex?.length>0) await sbFetch(`strains?nom=eq.${encodeURIComponent(strainNom)}`,{method:"PATCH",prefer:"return=minimal",body:JSON.stringify({type_produit:v})});
+      else await sbFetch("strains",{method:"POST",prefer:"return=minimal",body:JSON.stringify({nom:strainNom,type_produit:v})});
+    }catch(e){}finally{setSaving(false);}
+  };
   return(
     <div style={{flex:1,background:T.bg3,borderRadius:12,padding:"12px 14px",border:`1px solid ${color}44`}}>
       <div style={{fontSize:9,color:T.dim,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:8}}>Type</div>
       <div style={{display:"flex",flexDirection:"column",gap:6}}>
         {TYPES_PRODUIT.map(t=>(
-          <button key={t} onClick={()=>save(t)} style={{padding:"6px 10px",borderRadius:8,fontSize:11,fontWeight:700,background:type===t?color+"33":T.bg,border:`1px solid ${type===t?color:T.border}`,color:type===t?color:T.dim,textAlign:"left"}}>{t}</button>
+          <button key={t} onClick={()=>save(t)} style={{padding:"8px 10px",borderRadius:8,fontSize:12,fontWeight:700,background:type===t?color+"44":T.bg,border:`2px solid ${type===t?color:T.border}`,color:type===t?T.white:T.dim,textAlign:"left",boxShadow:type===t?`0 0 8px ${color}44`:"none"}}>{t}</button>
         ))}
       </div>
     </div>
@@ -296,8 +307,19 @@ const StrainEditFields=({strainNom,color,onClose})=>{
   const[data,setData]=useState({odeur:"",gout:"",mode_cure:"",notes:"",genetique:""});
   const[loaded,setLoaded]=useState(false);
   const[saving,setSaving]=useState(false);
-  useEffect(()=>{sbFetch(`strains?nom=eq.${encodeURIComponent(strainNom)}&select=*`).then(d=>{if(d?.[0]){setData({odeur:d[0].odeur||"",gout:d[0].gout||"",mode_cure:d[0].mode_cure||"",notes:d[0].notes||"",genetique:d[0].genetique||""});}setLoaded(true);}).catch(()=>setLoaded(true));},[strainNom]);
-  const save=async()=>{setSaving(true);try{const ex=await sbFetch(`strains?nom=eq.${encodeURIComponent(strainNom)}&select=id`);if(ex?.length>0)await sbFetch(`strains?nom=eq.${encodeURIComponent(strainNom)}`,{method:"PATCH",prefer:"return=minimal",body:JSON.stringify(data)});else await sbFetch("strains",{method:"POST",prefer:"return=minimal",body:JSON.stringify({nom:strainNom,...data})});}catch(e){alert("Erreur: "+e.message);}finally{setSaving(false);}};
+  useEffect(()=>{
+    sbFetch(`strains?nom=eq.${encodeURIComponent(strainNom)}&select=*`)
+      .then(d=>{if(d?.[0])setData({odeur:d[0].odeur||"",gout:d[0].gout||"",mode_cure:d[0].mode_cure||"",notes:d[0].notes||"",genetique:d[0].genetique||""});setLoaded(true);})
+      .catch(()=>setLoaded(true));
+  },[strainNom]);
+  const save=async()=>{
+    setSaving(true);
+    try{
+      const ex=await sbFetch(`strains?nom=eq.${encodeURIComponent(strainNom)}&select=id`);
+      if(ex?.length>0) await sbFetch(`strains?nom=eq.${encodeURIComponent(strainNom)}`,{method:"PATCH",prefer:"return=minimal",body:JSON.stringify(data)});
+      else await sbFetch("strains",{method:"POST",prefer:"return=minimal",body:JSON.stringify({nom:strainNom,...data})});
+    }catch(e){alert("Erreur: "+e.message);}finally{setSaving(false);}
+  };
   if(!loaded)return<div style={{color:T.dim,textAlign:"center",padding:12}}>...</div>;
   return(
     <div>
@@ -310,9 +332,7 @@ const StrainEditFields=({strainNom,color,onClose})=>{
         ))}
         <div style={{background:T.bg3,borderRadius:10,padding:"10px 12px",borderLeft:`2px solid ${color}44`}}>
           <div style={{fontSize:9,color:T.dim,marginBottom:6,letterSpacing:"0.1em",textTransform:"uppercase"}}>Cure</div>
-          <div style={{display:"flex",flexDirection:"column",gap:4}}>
-            {CURES.map(c=><button key={c} onClick={()=>setData(x=>({...x,mode_cure:c}))} style={{padding:"4px 8px",borderRadius:6,fontSize:11,fontWeight:700,background:data.mode_cure===c?color+"33":T.bg,border:`1px solid ${data.mode_cure===c?color:T.border}`,color:data.mode_cure===c?color:T.dim,textAlign:"left"}}>{c}</button>)}
-          </div>
+          <button onClick={()=>setData(x=>({...x,mode_cure:"FreezeDryer"}))} style={{padding:"6px 10px",borderRadius:8,fontSize:12,fontWeight:700,background:data.mode_cure==="FreezeDryer"?color+"44":T.bg,border:`2px solid ${data.mode_cure==="FreezeDryer"?color:T.border}`,color:data.mode_cure==="FreezeDryer"?T.white:T.dim,width:"100%",textAlign:"left"}}>FreezeDryer</button>
         </div>
       </div>
       <div style={{background:T.bg3,borderRadius:10,padding:"10px 12px",marginBottom:14,borderLeft:`2px solid ${color}44`}}>
@@ -576,6 +596,64 @@ const eW=(n)=>({numero:n,micron:"",glace:"—",vitesse:"",duree_min:15,couleur_1
 const eMach=(machine)=>({machine,strain:"",biomasse_kg:8,type_biomasse:"Fresh Frozen",nb_sacs:16,heure_debut:"",heure_fin:"",notes:"",washes:Array.from({length:10},(_,i)=>eW(i+1)),currentWash:1});
 const LSK_M=(m)=>`sz_m_${m.replace(/\s/g,"_")}`;
 
+const StrainSelector=({value,onChange,strainNames})=>{
+  const[showNew,setShowNew]=useState(false);
+  const[newName,setNewName]=useState("");
+  const[saving,setSaving]=useState(false);
+  const saveNew=async()=>{
+    if(!newName.trim())return;
+    setSaving(true);
+    try{
+      const ex=await sbFetch(`strains?nom=eq.${encodeURIComponent(newName.trim())}&select=id`);
+      if(!ex?.length) await sbFetch("strains",{method:"POST",prefer:"return=minimal",body:JSON.stringify({nom:newName.trim()})});
+      onChange(newName.trim());setShowNew(false);setNewName("");
+    }catch(e){alert("Erreur: "+e.message);}
+    finally{setSaving(false);}
+  };
+  if(showNew)return(
+    <div style={{display:"flex",flexDirection:"column",gap:6}}>
+      <input value={newName} onChange={e=>setNewName(e.target.value)} placeholder="Nom de la strain..." autoFocus style={{fontSize:14,padding:"8px 12px"}}/>
+      <div style={{display:"flex",gap:6}}>
+        <button onClick={()=>setShowNew(false)} style={{flex:1,padding:"8px",borderRadius:8,background:"transparent",border:`1px solid ${T.border}`,color:T.dim,fontSize:12}}>Annuler</button>
+        <button onClick={saveNew} disabled={saving} style={{flex:1,padding:"8px",borderRadius:8,background:T.orange,color:"#fff",fontSize:12,fontWeight:700}}>{saving?"...":"✓ Créer"}</button>
+      </div>
+    </div>
+  );
+  return(
+    <select value={value} onChange={e=>{ if(e.target.value==="__new__"){setShowNew(true);}else{onChange(e.target.value);}}} style={{fontSize:14,padding:"8px 12px"}}>
+      <option value="">Sélectionner...</option>
+      {strainNames.map(s=><option key={s}>{s}</option>)}
+      <option value="__new__">+ Nouvelle strain</option>
+    </select>
+  );
+};
+
+const MultiMicron=({value,onChange})=>{
+  const selected=value?value.split("-").map(x=>x.trim()).filter(Boolean):[];
+  const toggle=(m)=>{
+    const clean=m.replace("µ","");
+    const cur=selected.map(x=>x.replace("µ",""));
+    const next=cur.includes(clean)?cur.filter(x=>x!==clean):[...cur,clean];
+    // Sort by size order
+    const order=["220","160","90","45","25","FS"];
+    const sorted=order.filter(x=>next.includes(x));
+    onChange(sorted.length>0?sorted.join("-"):"");
+  };
+  return(
+    <div>
+      <Lbl c="Sacs du wash"/>
+      <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}}>
+        {MICRONS.map(m=>{
+          const clean=m.replace("µ","");
+          const on=selected.map(x=>x.replace("µ","")).includes(clean);
+          return<button key={m} onClick={()=>toggle(m)} style={{padding:"8px 14px",borderRadius:9,fontSize:13,fontWeight:700,background:on?T.orange:T.bg3,color:on?"#fff":T.ink,border:`1px solid ${on?T.orange:T.border}`,boxShadow:on?`0 2px 8px ${T.orange}44`:"none"}}>{m}</button>;
+        })}
+      </div>
+      {selected.length>0&&<div style={{fontSize:11,color:T.orange,fontFamily:"DM Mono",fontWeight:700}}>→ {selected.join("-")}</div>}
+    </div>
+  );
+};
+
 const MachineCard=({machine,strains})=>{
   const lsk=LSK_M(machine);
   const color=MC[machine]||T.orange;
@@ -639,7 +717,7 @@ const MachineCard=({machine,strains})=>{
           {[
             ["Strain", locked
               ? <div style={{fontSize:16,fontWeight:800,color:T.white}}>{data.strain||"—"}</div>
-              : <select value={data.strain} onChange={e=>sF("strain",e.target.value)} style={{fontSize:14,padding:"8px 12px"}}><option value="">Sélectionner...</option>{strainNames.map(s=><option key={s}>{s}</option>)}</select>
+              : <StrainSelector value={data.strain} onChange={v=>sF("strain",v)} strainNames={strainNames}/>
             ],
             ["Biomasse", locked
               ? <div style={{fontSize:16,fontWeight:800,color:color}}>{data.biomasse_kg} kg</div>
@@ -663,7 +741,7 @@ const MachineCard=({machine,strains})=>{
 
         {!locked&&(
           <div style={{marginBottom:12}}>
-            <BgSel label="Type biomasse" value={data.type_biomasse} onChange={v=>sF("type_biomasse",v)} options={["Fresh Frozen","Dry","Live"]}/>
+            <BgSel label="Type produit" value={data.type_biomasse} onChange={v=>sF("type_biomasse",v)} options={TYPES_BIOMASSE}/>
           </div>
         )}
 
@@ -717,7 +795,7 @@ const MachineCard=({machine,strains})=>{
                   </div>
                 )}
                 <div style={{background:T.bg3,borderRadius:12,padding:"12px 14px",marginBottom:16}}>
-                  <Fld label="Micron"><BgSel label="" value={curWData.micron} onChange={v=>sW(curW-1,"micron",v)} options={MICRONS}/></Fld>
+                  <MultiMicron value={curWData.micron} onChange={v=>sW(curW-1,"micron",v)}/>
                   <Fld label="Glace"><BgSel label="" value={curWData.glace||"—"} onChange={v=>sW(curW-1,"glace",v)} options={GLACE}/></Fld>
                   <Fld label="Vitesse"><BgSel label="" value={curWData.vitesse} onChange={v=>sW(curW-1,"vitesse",v)} options={VITESSES}/></Fld>
                 </div>
@@ -910,7 +988,19 @@ const Calendrier=()=>{
                 <div key={se.id} style={{background:T.bg3,border:`1px solid ${mC2}44`,borderRadius:12,padding:14,marginBottom:12}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
                     <div><div style={{fontSize:15,fontWeight:800}}>{se.strain||"—"}</div><div style={{fontSize:11,color:T.dim}}>{se.biomasse_kg}kg · {se.nb_sacs} sacs</div></div>
-                    <div style={{textAlign:"right"}}><Bdg col={mC2}>{MS[se.machine]||se.machine}</Bdg>{r&&<div style={{fontSize:18,fontWeight:800,color:T.gold,fontFamily:"DM Mono",marginTop:4}}>{r}%</div>}</div>
+                    <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                      <div style={{textAlign:"right"}}><Bdg col={mC2}>{MS[se.machine]||se.machine}</Bdg>{r&&<div style={{fontSize:18,fontWeight:800,color:T.gold,fontFamily:"DM Mono",marginTop:4}}>{r}%</div>}</div>
+                      <button onClick={async()=>{
+                        if(!confirm("Supprimer cette session ?"))return;
+                        try{
+                          await sbFetch(`washes?session_id=eq.${se.id}`,{method:"DELETE",prefer:"return=minimal"});
+                          await sbFetch(`pesees?session_id=eq.${se.id}`,{method:"DELETE",prefer:"return=minimal"});
+                          await sbFetch(`sessions?id=eq.${se.id}`,{method:"DELETE",prefer:"return=minimal"});
+                          const[newS,newW]=await Promise.all([sbFetch("sessions?select=*&order=date.asc"),sbFetch("washes?select=*")]);
+                          ss(newS||[]);sw(newW||[]);sDrw(null);
+                        }catch(e){alert("Erreur: "+e.message);}
+                      }} style={{width:32,height:32,borderRadius:8,background:T.danger+"22",border:`1px solid ${T.danger}44`,color:T.danger,fontSize:14,display:"flex",alignItems:"center",justifyContent:"center"}}>🗑</button>
+                    </div>
                   </div>
                   {sW.length>0&&<div style={{display:"flex",flexWrap:"wrap",gap:4}}>{sW.map(w=><div key={w.id} style={{background:T.bg,borderRadius:7,padding:"4px 8px",border:`1px solid ${T.border}`}}><span style={{fontFamily:"DM Mono",color:mC2,fontWeight:800,fontSize:11}}>W{w.numero}</span>{w.micron&&<span style={{fontSize:10,color:T.dim,marginLeft:4}}>{w.micron}</span>}{w.couleur_45&&<span style={{fontSize:10,color:T.ink,marginLeft:4}}>{w.couleur_45}</span>}</div>)}</div>}
                   {sP.length>0&&<div style={{marginTop:10,display:"flex",gap:8}}>{sP.map(p=><div key={p.id} style={{background:T.bg,borderRadius:8,padding:"5px 10px",flex:1,textAlign:"center"}}><div style={{fontSize:9,color:T.dim}}>{p.micron}</div><div style={{fontSize:14,fontWeight:800,color:T.gold,fontFamily:"DM Mono"}}>{p.poids_sec_g}g</div></div>)}</div>}
