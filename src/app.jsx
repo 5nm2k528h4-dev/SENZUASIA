@@ -41,9 +41,9 @@ button{cursor:pointer;font-family:'DM Sans',sans-serif;border:none;outline:none;
 .ww{overflow:hidden;position:relative;cursor:grab;user-select:none;}
 .wi{display:flex;flex-direction:column;}
 .witem{display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-weight:700;flex-shrink:0;}
-.wft{position:absolute;top:0;left:0;right:0;height:55px;background:linear-gradient(180deg,#0B0B1A,transparent);pointer-events:none;z-index:2;}
-.wfb{position:absolute;bottom:0;left:0;right:0;height:55px;background:linear-gradient(0deg,#0B0B1A,transparent);pointer-events:none;z-index:2;}
-.wsel{position:absolute;top:50%;left:8px;right:8px;height:44px;transform:translateY(-50%);border-top:1px solid #C0392B44;border-bottom:1px solid #C0392B44;pointer-events:none;z-index:3;border-radius:8px;background:#C0392B08;}
+.wft{position:absolute;top:0;left:0;right:0;height:55px;background:linear-gradient(180deg,#0B0B1A,transparent);pointer-events:none;z-index:3;}
+.wfb{position:absolute;bottom:0;left:0;right:0;height:55px;background:linear-gradient(0deg,#0B0B1A,transparent);pointer-events:none;z-index:3;}
+.wsel{position:absolute;top:50%;left:8px;right:8px;height:44px;transform:translateY(-50%);border-top:1px solid #C0392B66;border-bottom:1px solid #C0392B66;pointer-events:none;z-index:2;border-radius:8px;background:#C0392B08;}
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
 @keyframes tpulse{0%,100%{opacity:1;}50%{opacity:0.35;}}
 @keyframes aura{0%,100%{box-shadow:0 0 20px #FFD70055,0 0 40px #FFD70022;}50%{box-shadow:0 0 40px #FFD700AA,0 0 80px #FFD70044;}}
@@ -596,10 +596,11 @@ const eW=(n)=>({numero:n,micron:"",glace:"—",vitesse:"",duree_min:15,couleur_1
 const eMach=(machine)=>({machine,strain:"",biomasse_kg:8,type_biomasse:"Fresh Frozen",nb_sacs:16,heure_debut:"",heure_fin:"",notes:"",washes:Array.from({length:10},(_,i)=>eW(i+1)),currentWash:1});
 const LSK_M=(m)=>`sz_m_${m.replace(/\s/g,"_")}`;
 
-const StrainSelector=({value,onChange,strainNames})=>{
+const StrainSelector=({value,onChange,strainNames,onDelete})=>{
   const[showNew,setShowNew]=useState(false);
   const[newName,setNewName]=useState("");
   const[saving,setSaving]=useState(false);
+  const[pressTimer,setPressTimer]=useState(null);
   const saveNew=async()=>{
     if(!newName.trim())return;
     setSaving(true);
@@ -619,12 +620,43 @@ const StrainSelector=({value,onChange,strainNames})=>{
       </div>
     </div>
   );
+
+  // Custom dropdown with long-press delete
+  const[open,setOpen]=useState(false);
   return(
-    <select value={value} onChange={e=>{ if(e.target.value==="__new__"){setShowNew(true);}else{onChange(e.target.value);}}} style={{fontSize:14,padding:"8px 12px"}}>
-      <option value="">Sélectionner...</option>
-      {strainNames.map(s=><option key={s}>{s}</option>)}
-      <option value="__new__">+ Nouvelle strain</option>
-    </select>
+    <div style={{position:"relative"}}>
+      <button onClick={()=>setOpen(x=>!x)} style={{width:"100%",background:T.bg3,border:`1px solid ${value?T.orange+"44":T.border}`,borderRadius:10,padding:"12px 16px",color:value?T.white:T.dim,fontSize:14,textAlign:"left",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <span>{value||"Sélectionner..."}</span>
+        <span style={{color:T.dim,fontSize:10}}>{open?"▲":"▼"}</span>
+      </button>
+      {open&&(
+        <div style={{position:"absolute",top:"calc(100% + 4px)",left:0,right:0,background:T.bg2,border:`1px solid ${T.border}`,borderRadius:12,zIndex:200,overflow:"hidden",boxShadow:"0 8px 30px #00000099"}}>
+          {strainNames.map(s=>{
+            let timer=null;
+            return(
+              <div key={s} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 16px",borderBottom:`1px solid ${T.border}`,background:value===s?T.orange+"22":"transparent"}}
+                onTouchStart={()=>{timer=setTimeout(async()=>{
+                  if(confirm(`Supprimer "${s}" de la liste ?`)){
+                    try{
+                      await sbFetch(`strains?nom=eq.${encodeURIComponent(s)}`,{method:"DELETE",prefer:"return=minimal"});
+                      if(onDelete)onDelete(s);
+                      if(value===s)onChange("");
+                      setOpen(false);
+                    }catch(e){alert("Erreur: "+e.message);}
+                  }
+                },700);setPressTimer(timer);}}
+                onTouchEnd={()=>{clearTimeout(timer);}}>
+                <button onClick={()=>{onChange(s);setOpen(false);}} style={{background:"none",color:value===s?T.orange:T.white,fontSize:14,fontWeight:value===s?700:400,flex:1,textAlign:"left"}}>
+                  {value===s&&"✓ "}{s}
+                </button>
+                <span style={{fontSize:9,color:T.dim}}>Appui long pour supprimer</span>
+              </div>
+            );
+          })}
+          <div onClick={()=>{setOpen(false);setShowNew(true);}} style={{padding:"12px 16px",color:T.orange,fontSize:13,fontWeight:700,cursor:"pointer"}}>+ Nouvelle strain</div>
+        </div>
+      )}
+    </div>
   );
 };
 
@@ -717,7 +749,7 @@ const MachineCard=({machine,strains})=>{
           {[
             ["Strain", locked
               ? <div style={{fontSize:16,fontWeight:800,color:T.white}}>{data.strain||"—"}</div>
-              : <StrainSelector value={data.strain} onChange={v=>sF("strain",v)} strainNames={strainNames}/>
+              : <StrainSelector value={data.strain} onChange={v=>sF("strain",v)} strainNames={strainNames} onDelete={()=>sF("strain","")}/>
             ],
             ["Biomasse", locked
               ? <div style={{fontSize:16,fontWeight:800,color:color}}>{data.biomasse_kg} kg</div>
@@ -1047,7 +1079,7 @@ const Catalogue=()=>{
     return b>0?((po/(b*1000))*100).toFixed(2):null;
   };
 
-  const edit=(st)=>{sEd(st.nom||st);sED({odeur:st.odeur||"",gout:st.gout||"",mode_cure:st.mode_cure||"",notes:st.notes||"",genetique:st.genetique||""});};
+  const edit=(st)=>{sEd(st.nom||st);sED({odeur:st.odeur||"",gout:st.gout||"",mode_cure:st.mode_cure||"",notes:st.notes||"",genetique:st.genetique||"",type_produit:st.type_produit||""});};
 
   const saveEdit=async()=>{
     if(!editing)return;sSav(true);
@@ -1101,8 +1133,20 @@ const Catalogue=()=>{
         <Crd s={{marginBottom:16,border:`1px solid ${T.gold}44`}}>
           <STL icon="⚖" text="PESÉES FREEZE DRYER" col={T.gold}/>
           <Fld label="Strain"><select value={nP.strain} onChange={e=>sNP(x=>({...x,strain:e.target.value}))}><option value="">Sélectionner...</option>{allSt.map(s=><option key={s.nom||s}>{s.nom||s}</option>)}</select></Fld>
-          <Step label="90µ — Poids (g)" value={parseFloat(nP.m90)||0} onChange={v=>sNP(x=>({...x,m90:v}))} step={0.1} max={9999} unit="g"/>
-          <Step label="45µ / FS — Poids (g)" value={parseFloat(nP.m45)||0} onChange={v=>sNP(x=>({...x,m45:v}))} step={0.1} max={9999} unit="g"/>
+          <Fld label="90µ — Poids (g)">
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <button onClick={()=>sNP(x=>({...x,m90:Math.max(0,parseFloat(x.m90||0)-0.1).toFixed(1)}))} style={{width:44,height:44,borderRadius:10,background:T.bg3,border:`1px solid ${T.border}`,color:T.white,fontSize:20,fontWeight:700,flexShrink:0}}>−</button>
+              <input type="number" value={nP.m90} onChange={e=>sNP(x=>({...x,m90:e.target.value}))} style={{textAlign:"center",fontSize:22,fontWeight:800,color:T.orange,fontFamily:"DM Mono"}} min="0" step="0.1"/>
+              <button onClick={()=>sNP(x=>({...x,m90:parseFloat((parseFloat(x.m90||0)+0.1).toFixed(1))}))} style={{width:44,height:44,borderRadius:10,background:T.orange,color:"#fff",fontSize:20,fontWeight:700,flexShrink:0}}>+</button>
+            </div>
+          </Fld>
+          <Fld label="45µ / FS — Poids (g)">
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <button onClick={()=>sNP(x=>({...x,m45:Math.max(0,parseFloat(x.m45||0)-0.1).toFixed(1)}))} style={{width:44,height:44,borderRadius:10,background:T.bg3,border:`1px solid ${T.border}`,color:T.white,fontSize:20,fontWeight:700,flexShrink:0}}>−</button>
+              <input type="number" value={nP.m45} onChange={e=>sNP(x=>({...x,m45:e.target.value}))} style={{textAlign:"center",fontSize:22,fontWeight:800,color:T.orange,fontFamily:"DM Mono"}} min="0" step="0.1"/>
+              <button onClick={()=>sNP(x=>({...x,m45:parseFloat((parseFloat(x.m45||0)+0.1).toFixed(1))}))} style={{width:44,height:44,borderRadius:10,background:T.orange,color:"#fff",fontSize:20,fontWeight:700,flexShrink:0}}>+</button>
+            </div>
+          </Fld>
           <div style={{display:"flex",gap:10}}>
             <BOL c="Annuler" onClick={()=>sShP(false)} col={T.dim}/>
             <Btn c={saving?"Sauvegarde...":"💾 Sauvegarder"} onClick={addPesee} disabled={saving} col={T.gold}/>
@@ -1129,7 +1173,14 @@ const Catalogue=()=>{
         })}
       </div>
 
-      {sel&&selSt&&(
+      {sel&&selSt&&(()=>{
+        const[prodTab,setProdTab]=useState("wpff");
+        const r=getR(sel);
+        const rec=r&&parseFloat(r)>4;
+        const seSel=sessions.filter(s=>s.strain===sel);
+        const peSel=pesees.filter(p=>seSel.find(s=>s.id===p.session_id));
+        const byMicron={};peSel.forEach(p=>{if(!byMicron[p.micron])byMicron[p.micron]=0;byMicron[p.micron]+=parseFloat(p.poids_sec_g)||0;});
+        return(
         <div style={{position:"fixed",inset:0,zIndex:500,background:"#000000AA",display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={()=>{sSel(null);sEd(null);}}>
           <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:768,background:`linear-gradient(160deg,${T.bg2},${selC}18)`,border:`2px solid ${selC}88`,borderRadius:"24px 24px 0 0",maxHeight:"90vh",overflowY:"auto",animation:"dup 0.3s ease",paddingBottom:"max(24px,env(safe-area-inset-bottom))"}}>
             <div style={{height:200,background:selSt.photo_url?`url(${selSt.photo_url}) center/cover`:`linear-gradient(135deg,${selC}44,${T.bg3})`,display:"flex",alignItems:"flex-end",justifyContent:"space-between",padding:20,position:"relative"}}>
@@ -1143,14 +1194,69 @@ const Catalogue=()=>{
               <button onClick={()=>fRef.current.click()} style={{background:`${T.bg2}CC`,border:`1px solid ${selC}`,borderRadius:10,padding:"8px 14px",color:selC,fontWeight:700,fontSize:12}}>📷 Photo</button>
             </div>
             <div style={{padding:20}}>
-              {(()=>{const r=getR(sel);const rec=r&&parseFloat(r)>4;return r&&<div style={{textAlign:"center",marginBottom:20}}><div style={{fontSize:9,color:T.dim,letterSpacing:"0.15em",textTransform:"uppercase",marginBottom:4}}>Rendement</div><div style={{fontSize:52,fontWeight:800,fontFamily:"DM Mono",color:rec?T.aura:selC,animation:rec?"rglow 2s infinite":"none"}}>{r}%</div></div>;})()}
+              {/* Product tabs */}
+              <div style={{display:"flex",gap:8,marginBottom:16}}>
+                {[["wpff","🧊 WPFF"],["rosin","🔥 Live Rosin"]].map(([id,lbl])=>(
+                  <button key={id} onClick={()=>setProdTab(id)} style={{flex:1,padding:"10px",borderRadius:12,fontWeight:800,fontSize:13,background:prodTab===id?selC+"33":T.bg3,color:prodTab===id?selC:T.dim,border:`2px solid ${prodTab===id?selC:T.border}`}}>{lbl}</button>
+                ))}
+              </div>
+
+              {/* WPFF tab */}
+              {prodTab==="wpff"&&(
+                <div style={{marginBottom:16}}>
+                  <div style={{textAlign:"center",marginBottom:14,background:T.bg3,borderRadius:14,padding:"14px",border:`1px solid ${selC}44`}}>
+                    <div style={{fontSize:9,color:T.dim,letterSpacing:"0.15em",textTransform:"uppercase",marginBottom:6}}>Rendement WPFF</div>
+                    <div style={{fontSize:48,fontWeight:800,fontFamily:"DM Mono",color:rec?T.aura:selC,animation:rec?"rglow 2s infinite":"none"}}>{r?`${r}%`:"—"}</div>
+                    <div style={{fontSize:10,color:T.dim,marginTop:4}}>Ice Water Hash · FreezeDryer</div>
+                  </div>
+                  {Object.keys(byMicron).length>0&&(
+                    <div style={{display:"flex",gap:8,marginBottom:14}}>
+                      {Object.entries(byMicron).map(([mic,po])=>(
+                        <div key={mic} style={{flex:1,background:T.bg3,borderRadius:10,padding:"10px",textAlign:"center",border:`1px solid ${selC}22`}}>
+                          <div style={{fontSize:9,color:T.dim,marginBottom:3}}>{mic}</div>
+                          <div style={{fontSize:16,fontWeight:800,color:T.gold,fontFamily:"DM Mono"}}>{po.toFixed(1)}g</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Live Rosin tab */}
+              {prodTab==="rosin"&&(
+                <div style={{marginBottom:16}}>
+                  <div style={{textAlign:"center",marginBottom:14,background:T.bg3,borderRadius:14,padding:"24px",border:`1px solid ${T.gold}33`}}>
+                    <div style={{fontSize:9,color:T.dim,letterSpacing:"0.15em",textTransform:"uppercase",marginBottom:8}}>Rendement Live Rosin</div>
+                    <div style={{fontSize:22,fontWeight:700,color:T.gold,marginBottom:6}}>À venir</div>
+                    <div style={{fontSize:11,color:T.dim}}>Fabriqué à partir du WPFF (90µ / 45µ)</div>
+                    <div style={{fontSize:11,color:T.dim,marginTop:4}}>ou du 160µ blend multi-strains</div>
+                  </div>
+                  <div style={{background:T.bg3,borderRadius:12,padding:"14px",border:`1px solid ${T.border}`}}>
+                    <div style={{fontSize:10,color:T.dim,marginBottom:6}}>160µ WPFF disponible</div>
+                    {byMicron["160µ"]
+                      ? <div style={{fontSize:22,fontWeight:800,color:T.orange,fontFamily:"DM Mono"}}>{byMicron["160µ"].toFixed(1)}g</div>
+                      : <div style={{fontSize:13,color:T.dim,fontStyle:"italic"}}>Aucune pesée 160µ enregistrée</div>
+                    }
+                  </div>
+                </div>
+              )}
+
               {editing===sel?(
                 <Crd s={{border:`1px solid ${selC}44`}}>
                   <STL icon="✏" text="MODIFIER" col={selC}/>
                   <Fld label="Génétique"><input value={ed.genetique||""} onChange={e=>sED(x=>({...x,genetique:e.target.value}))} placeholder="Ex: GMO x Triangle Kush"/></Fld>
                   <Fld label="Odeur"><input value={ed.odeur||""} onChange={e=>sED(x=>({...x,odeur:e.target.value}))} placeholder="Ex: Terreuse, fruitée..."/></Fld>
                   <Fld label="Goût"><input value={ed.gout||""} onChange={e=>sED(x=>({...x,gout:e.target.value}))} placeholder="Ex: Diesel, floral..."/></Fld>
-                  <BgSel label="Mode de cure" value={ed.mode_cure||""} onChange={v=>sED(x=>({...x,mode_cure:v}))} options={CURES}/>
+                  <div style={{marginBottom:14}}>
+                    <Lbl c="Mode de cure"/>
+                    <button onClick={()=>sED(x=>({...x,mode_cure:"FreezeDryer"}))} style={{padding:"10px 18px",borderRadius:10,fontWeight:700,fontSize:13,background:ed.mode_cure==="FreezeDryer"?selC+"44":T.bg3,color:ed.mode_cure==="FreezeDryer"?T.white:T.dim,border:`2px solid ${ed.mode_cure==="FreezeDryer"?selC:T.border}`}}>FreezeDryer</button>
+                  </div>
+                  <div style={{marginBottom:14}}>
+                    <Lbl c="Type produit"/>
+                    <div style={{display:"flex",gap:8}}>
+                      {TYPES_PRODUIT.map(t=><button key={t} onClick={()=>sED(x=>({...x,type_produit:t}))} style={{flex:1,padding:"10px",borderRadius:10,fontWeight:700,fontSize:13,background:ed.type_produit===t?selC+"44":T.bg3,color:ed.type_produit===t?T.white:T.dim,border:`2px solid ${ed.type_produit===t?selC:T.border}`}}>{t}</button>)}
+                    </div>
+                  </div>
                   <Fld label="Notes"><textarea value={ed.notes||""} onChange={e=>sED(x=>({...x,notes:e.target.value}))} rows={3} style={{resize:"none"}}/></Fld>
                   <div style={{display:"flex",gap:10}}>
                     <BOL c="Annuler" onClick={()=>sEd(null)} col={T.dim}/>
@@ -1160,24 +1266,13 @@ const Catalogue=()=>{
               ):(
                 <>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
-                    {[["Odeur",selSt.odeur||"—"],["Goût",selSt.gout||"—"],["Cure",selSt.mode_cure||"—"],["Sessions",sessions.filter(s=>s.strain===sel).length]].map(([l,v])=>(
+                    {[["Odeur",selSt.odeur||"—"],["Goût",selSt.gout||"—"],["Cure",selSt.mode_cure||"FreezeDryer"],["Sessions",seSel.length]].map(([l,v])=>(
                       <div key={l} style={{background:T.bg3,borderRadius:12,padding:"12px 14px",borderLeft:`2px solid ${selC}66`}}>
                         <div style={{fontSize:9,color:T.dim,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:4}}>{l}</div>
                         <div style={{fontSize:15,fontWeight:700,color:T.white}}>{v}</div>
                       </div>
                     ))}
                   </div>
-                  {(()=>{
-                    const se=sessions.filter(s=>s.strain===sel);
-                    const pe=pesees.filter(p=>se.find(s=>s.id===p.session_id));
-                    const bM={};pe.forEach(p=>{if(!bM[p.micron])bM[p.micron]=0;bM[p.micron]+=parseFloat(p.poids_sec_g)||0;});
-                    return Object.keys(bM).length>0&&(
-                      <div style={{marginBottom:16}}>
-                        <div style={{fontSize:10,color:T.dim,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>Pesées totales</div>
-                        <div style={{display:"flex",gap:8}}>{Object.entries(bM).map(([mic,po])=><div key={mic} style={{flex:1,background:T.bg3,borderRadius:10,padding:"10px",textAlign:"center"}}><div style={{fontSize:9,color:T.dim}}>{mic}</div><div style={{fontSize:18,fontWeight:800,color:T.gold,fontFamily:"DM Mono"}}>{po.toFixed(1)}g</div></div>)}</div>
-                      </div>
-                    );
-                  })()}
                   {selSt.notes&&<div style={{background:T.bg3,borderRadius:12,padding:14,marginBottom:14}}><div style={{fontSize:9,color:T.dim,marginBottom:4}}>NOTES</div><div style={{fontSize:13,color:T.ink,fontStyle:"italic"}}>{selSt.notes}</div></div>}
                   <div style={{display:"flex",gap:10}}>
                     <button onClick={()=>edit(selSt)} style={{flex:1,padding:"13px",borderRadius:12,background:selC+"22",border:`1.5px solid ${selC}`,color:selC,fontWeight:700,fontSize:14}}>✏ Modifier</button>
@@ -1188,7 +1283,8 @@ const Catalogue=()=>{
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
     </div>
   );
 };
