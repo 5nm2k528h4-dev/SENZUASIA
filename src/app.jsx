@@ -565,54 +565,6 @@ const Dashboard=()=>{
         </div>
       </Crd>
 
-      {uStr.length>0&&(
-        <div style={{marginBottom:22,marginTop:16}}>
-          <STL icon="🃏" text="STRAINS"/>
-          <div style={{display:"flex",gap:12,overflowX:"auto",paddingBottom:10,scrollbarWidth:"none"}}>
-            {uStr.map((s,i)=>{
-              const nom=s.nom||s,r=getR(nom),c=SC[i%SC.length],rec=r&&parseFloat(r)>4;
-              return(
-                <div key={nom} onClick={()=>ssel(nom)} style={{width:155,flexShrink:0,cursor:"pointer",borderRadius:16,overflow:"hidden",background:`linear-gradient(160deg,${T.bg3},${c}18)`,border:`2px solid ${rec?T.aura:c+"44"}`,animation:rec?"aura 2.5s infinite":"none"}}>
-                  <div style={{height:110,background:s.photo_url?`url(${s.photo_url}) center/cover`:`linear-gradient(135deg,${c}33,${T.bg})`,display:"flex",alignItems:"center",justifyContent:"center",position:"relative"}}>
-                    {!s.photo_url&&<div style={{fontSize:30,opacity:0.3}}>🌿</div>}
-                    {rec&&<div style={{position:"absolute",top:6,right:6,background:T.aura,borderRadius:5,padding:"1px 6px",fontSize:8,fontWeight:800,color:"#000"}}>★ REC</div>}
-                  </div>
-                  <div style={{padding:"10px 12px",background:`${T.bg}CC`}}>
-                    <div style={{fontSize:14,fontWeight:900,fontStyle:"italic",color:T.white,marginBottom:3,textShadow:`1px 1px 0 ${c}`}}>{nom}</div>
-                    <div style={{fontSize:22,fontWeight:800,fontFamily:"DM Mono",color:rec?T.aura:c,animation:rec?"rglow 2s infinite":"none"}}>{r?`${r}%`:"—"}</div>
-                    <div style={{fontSize:9,color:T.dim,marginTop:3}}>Tap pour détails</div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          <div style={{fontSize:9,color:T.dim,textAlign:"center",marginTop:4}}>← Swipe · Tap pour détails →</div>
-        </div>
-      )}
-
-      {sel&&selSt&&(
-        <div style={{position:"fixed",inset:0,zIndex:500,background:"#000000AA",display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={()=>ssel(null)}>
-          <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:360,background:`linear-gradient(160deg,${T.bg2},${selC}22)`,border:`2px solid ${selC}88`,borderRadius:24,overflow:"hidden",animation:"min 0.3s ease",boxShadow:`0 20px 60px #000000CC,0 0 40px ${selC}33`}}>
-            <div style={{height:160,background:selSt.photo_url?`url(${selSt.photo_url}) center/cover`:`linear-gradient(135deg,${selC}44,${T.bg3})`,display:"flex",alignItems:"flex-end",justifyContent:"center",padding:16,position:"relative"}}>
-              {!selSt.photo_url&&<div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:50,opacity:0.15}}>🌿</div>}
-              <div style={{fontSize:30,fontWeight:900,fontStyle:"italic",color:T.white,textShadow:`2px 2px 0 ${selC}`,textAlign:"center"}}>{sel}</div>
-            </div>
-            <div style={{padding:18}}>
-              {(()=>{const r=getR(sel);const rec=r&&parseFloat(r)>4;return r&&(
-                <div style={{display:"flex",gap:10,marginBottom:14}}>
-                  <div style={{flex:1,background:T.bg3,borderRadius:12,padding:"12px 14px",textAlign:"center",border:`1px solid ${selC}44`}}>
-                    <div style={{fontSize:9,color:T.dim,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:4}}>Rendement</div>
-                    <div style={{fontSize:28,fontWeight:800,fontFamily:"DM Mono",color:rec?T.aura:selC,animation:rec?"rglow 2s infinite":"none"}}>{r}%</div>
-                  </div>
-                  <StrainTypeField strainNom={sel} color={selC}/>
-                </div>
-              );})()}
-              <StrainEditFields strainNom={sel} color={selC} onClose={()=>ssel(null)}/>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* ── CATALOGUE SECTION ── */}
       <CatalogueSection/>
     </div>
@@ -1259,48 +1211,73 @@ const CatalogueSection=()=>{
   const selC=selSt?SC[allSt.indexOf(selSt)%SC.length]:T.orange;
 
   return(
-    <div style={{marginTop:24}}>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+    <div style={{marginTop:20}}>
+      {/* Header Catalogue */}
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
         <STL icon="🏺" text="CATALOGUE" col={T.gold}/>
-        <button onClick={()=>sShP(x=>!x)} style={{background:T.gold+"22",border:`1px solid ${T.gold}44`,borderRadius:10,padding:"6px 14px",color:T.gold,fontWeight:700,fontSize:11}}>⚖ Pesées</button>
+        <button onClick={()=>sShP(x=>!x)} style={{background:"transparent",border:`1px solid ${T.border}`,borderRadius:8,padding:"5px 12px",color:T.dim,fontWeight:600,fontSize:11,display:"flex",alignItems:"center",gap:5}}>
+          <span style={{fontSize:13}}>⚖</span> Pesées
+        </button>
       </div>
+
+      {/* Formulaire pesées */}
       {showP&&(
-        <Crd s={{marginBottom:16,border:`1px solid ${T.gold}44`}}>
-          <STL icon="⚖" text="PESÉES FREEZE DRYER" col={T.gold}/>
+        <div style={{background:T.bg2,border:`1px solid ${T.gold}33`,borderRadius:14,padding:16,marginBottom:14}}>
+          <div style={{fontSize:10,color:T.gold,fontWeight:800,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:12}}>⚖ Pesées Freeze Dryer</div>
           <Fld label="Strain"><select value={nP.strain} onChange={e=>sNP(x=>({...x,strain:e.target.value}))}><option value="">Sélectionner...</option>{allSt.map(s=><option key={s.nom||s}>{s.nom||s}</option>)}</select></Fld>
-          <Fld label="90µ — Poids (g)">
-            <div style={{display:"flex",alignItems:"center",gap:8}}>
-              <button onClick={()=>sNP(x=>({...x,m90:Math.max(0,parseFloat(x.m90||0)-0.1).toFixed(1)}))} style={{width:44,height:44,borderRadius:10,background:T.bg3,border:`1px solid ${T.border}`,color:T.white,fontSize:20,fontWeight:700,flexShrink:0}}>−</button>
-              <input type="number" value={nP.m90} onChange={e=>sNP(x=>({...x,m90:e.target.value}))} style={{textAlign:"center",fontSize:22,fontWeight:800,color:T.orange,fontFamily:"DM Mono"}} min="0" step="0.1"/>
-              <button onClick={()=>sNP(x=>({...x,m90:parseFloat((parseFloat(x.m90||0)+0.1).toFixed(1))}))} style={{width:44,height:44,borderRadius:10,background:T.orange,color:"#fff",fontSize:20,fontWeight:700,flexShrink:0}}>+</button>
-            </div>
-          </Fld>
-          <Fld label="45µ / FS — Poids (g)">
-            <div style={{display:"flex",alignItems:"center",gap:8}}>
-              <button onClick={()=>sNP(x=>({...x,m45:Math.max(0,parseFloat(x.m45||0)-0.1).toFixed(1)}))} style={{width:44,height:44,borderRadius:10,background:T.bg3,border:`1px solid ${T.border}`,color:T.white,fontSize:20,fontWeight:700,flexShrink:0}}>−</button>
-              <input type="number" value={nP.m45} onChange={e=>sNP(x=>({...x,m45:e.target.value}))} style={{textAlign:"center",fontSize:22,fontWeight:800,color:T.orange,fontFamily:"DM Mono"}} min="0" step="0.1"/>
-              <button onClick={()=>sNP(x=>({...x,m45:parseFloat((parseFloat(x.m45||0)+0.1).toFixed(1))}))} style={{width:44,height:44,borderRadius:10,background:T.orange,color:"#fff",fontSize:20,fontWeight:700,flexShrink:0}}>+</button>
-            </div>
-          </Fld>
-          <div style={{display:"flex",gap:10}}>
-            <BOL c="Annuler" onClick={()=>sShP(false)} col={T.dim}/>
-            <Btn c={saving?"Sauvegarde...":"💾 Sauvegarder"} onClick={addPesee} disabled={saving} col={T.gold}/>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+            <Fld label="90µ (g)">
+              <div style={{display:"flex",alignItems:"center",gap:6}}>
+                <button onClick={()=>sNP(x=>({...x,m90:Math.max(0,parseFloat(x.m90||0)-0.1).toFixed(1)}))} style={{width:36,height:36,borderRadius:8,background:T.bg3,border:`1px solid ${T.border}`,color:T.white,fontSize:18,fontWeight:700,flexShrink:0}}>−</button>
+                <input type="number" value={nP.m90} onChange={e=>sNP(x=>({...x,m90:e.target.value}))} style={{textAlign:"center",fontSize:18,fontWeight:800,color:T.orange,fontFamily:"DM Mono"}} min="0" step="0.1"/>
+                <button onClick={()=>sNP(x=>({...x,m90:parseFloat((parseFloat(x.m90||0)+0.1).toFixed(1))}))} style={{width:36,height:36,borderRadius:8,background:T.orange,color:"#fff",fontSize:18,fontWeight:700,flexShrink:0}}>+</button>
+              </div>
+            </Fld>
+            <Fld label="45µ / FS (g)">
+              <div style={{display:"flex",alignItems:"center",gap:6}}>
+                <button onClick={()=>sNP(x=>({...x,m45:Math.max(0,parseFloat(x.m45||0)-0.1).toFixed(1)}))} style={{width:36,height:36,borderRadius:8,background:T.bg3,border:`1px solid ${T.border}`,color:T.white,fontSize:18,fontWeight:700,flexShrink:0}}>−</button>
+                <input type="number" value={nP.m45} onChange={e=>sNP(x=>({...x,m45:e.target.value}))} style={{textAlign:"center",fontSize:18,fontWeight:800,color:T.orange,fontFamily:"DM Mono"}} min="0" step="0.1"/>
+                <button onClick={()=>sNP(x=>({...x,m45:parseFloat((parseFloat(x.m45||0)+0.1).toFixed(1))}))} style={{width:36,height:36,borderRadius:8,background:T.orange,color:"#fff",fontSize:18,fontWeight:700,flexShrink:0}}>+</button>
+              </div>
+            </Fld>
           </div>
-        </Crd>
+          <div style={{display:"flex",gap:8,marginTop:4}}>
+            <button onClick={()=>sShP(false)} style={{flex:1,padding:"10px",borderRadius:10,background:"transparent",border:`1px solid ${T.border}`,color:T.dim,fontWeight:600,fontSize:13}}>Annuler</button>
+            <button onClick={addPesee} disabled={saving} style={{flex:1,padding:"10px",borderRadius:10,background:T.gold,color:"#000",fontWeight:800,fontSize:13,opacity:saving?0.5:1}}>{saving?"...":"💾 Sauvegarder"}</button>
+          </div>
+        </div>
       )}
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}}>
+
+      {/* Grid cards — style sobre pleine largeur */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
         {allSt.map((s,i)=>{
           const nom=s.nom||s,r=getR(nom),c=SC[i%SC.length],rec=r&&parseFloat(r)>4;
+          const typeProd=s.type_produit;
           return(
-            <div key={nom} onClick={()=>sSel(nom)} style={{background:`linear-gradient(160deg,${T.card},${c}18)`,border:`2px solid ${rec?T.aura:c+"44"}`,borderRadius:16,overflow:"hidden",cursor:"pointer",animation:rec?"aura 2.5s infinite":"none"}}>
-              <div style={{height:140,background:s.photo_url?`url(${s.photo_url}) center/cover`:`linear-gradient(135deg,${c}33,${T.bg3})`,display:"flex",alignItems:"center",justifyContent:"center",position:"relative"}}>
-                {!s.photo_url&&<div style={{fontSize:40,opacity:0.2}}>🌿</div>}
-                {rec&&<div style={{position:"absolute",top:8,right:8,background:T.aura,borderRadius:6,padding:"2px 8px",fontSize:9,fontWeight:800,color:"#000"}}>★ RECORD</div>}
+            <div key={nom} onClick={()=>sSel(nom)} style={{borderRadius:14,overflow:"hidden",cursor:"pointer",background:T.card,border:`1px solid ${rec?T.aura+"66":T.border}`,boxShadow:rec?`0 0 20px ${T.aura}22`:"none",transition:"all 0.2s"}}>
+              {/* Zone photo */}
+              <div style={{height:130,position:"relative",background:s.photo_url?`url(${s.photo_url}) center/cover`:`linear-gradient(160deg,${c}22,${T.bg3})`}}>
+                {!s.photo_url&&<div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:36,opacity:0.12}}>🌿</div>}
+                {/* Badges overlay */}
+                <div style={{position:"absolute",top:8,left:8,display:"flex",gap:4,flexWrap:"wrap"}}>
+                  {typeProd&&<span style={{background:typeProd==="WPFF"?"#1a3a2a":"#2a1a0a",color:typeProd==="WPFF"?"#4ade80":T.gold,border:`1px solid ${typeProd==="WPFF"?"#4ade8044":T.gold+"44"}`,borderRadius:5,padding:"2px 7px",fontSize:9,fontWeight:800,letterSpacing:"0.05em"}}>{typeProd==="WPFF"?"🧊 WPFF":"🔥 ROSIN"}</span>}
+                  {rec&&<span style={{background:T.aura,color:"#000",borderRadius:5,padding:"2px 7px",fontSize:9,fontWeight:800}}>★ REC</span>}
+                </div>
+                {/* Rendement overlay bas droite */}
+                {r&&<div style={{position:"absolute",bottom:8,right:8,background:"#00000088",backdropFilter:"blur(8px)",borderRadius:8,padding:"4px 10px"}}>
+                  <div style={{fontSize:18,fontWeight:800,fontFamily:"DM Mono",color:rec?T.aura:c,lineHeight:1,animation:rec?"rglow 2s infinite":"none"}}>{r}%</div>
+                </div>}
+                {/* Gradient bas */}
+                <div style={{position:"absolute",bottom:0,left:0,right:0,height:50,background:"linear-gradient(0deg,#0B0B1AEE,transparent)"}}/>
               </div>
-              <div style={{padding:"12px 14px"}}>
-                <div style={{fontSize:17,fontWeight:900,fontStyle:"italic",color:T.white,textShadow:`1px 1px 0 ${c}`,marginBottom:4}}>{nom}</div>
-                <div style={{fontSize:28,fontWeight:800,fontFamily:"DM Mono",color:rec?T.aura:c,lineHeight:1,animation:rec?"rglow 2s infinite":"none"}}>{r?`${r}%`:"—"}</div>
-                {s.odeur&&<div style={{fontSize:11,color:T.dim,marginTop:4}}>👃 {s.odeur}</div>}
+              {/* Info compacte */}
+              <div style={{padding:"10px 12px"}}>
+                <div style={{fontSize:15,fontWeight:800,color:T.white,marginBottom:2,letterSpacing:"0.01em"}}>{nom}</div>
+                {s.genetique&&<div style={{fontSize:10,color:T.dim,marginBottom:4}}>{s.genetique}</div>}
+                <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                  {s.odeur&&<span style={{fontSize:10,color:T.ink,background:T.bg3,borderRadius:4,padding:"2px 7px"}}>👃 {s.odeur}</span>}
+                  {s.gout&&<span style={{fontSize:10,color:T.ink,background:T.bg3,borderRadius:4,padding:"2px 7px"}}>👅 {s.gout}</span>}
+                </div>
               </div>
             </div>
           );
