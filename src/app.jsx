@@ -1285,12 +1285,91 @@ const Catalogue=()=>{
   );
 };
 
+// ── PIN SCREEN ────────────────────────────────────────────────────────────────
+const PIN_CODE = "73698";
+const PIN_LS   = "sz_auth";
+
+const PinScreen = ({onUnlock}) => {
+  const[input,setInput]=useState("");
+  const[shake,setShake]=useState(false);
+  const[unlocking,setUnlocking]=useState(false);
+
+  const press=(d)=>{
+    if(input.length>=5) return;
+    const next=input+d;
+    setInput(next);
+    if(next.length===5){
+      if(next===PIN_CODE){
+        setUnlocking(true);
+        setTimeout(()=>{ try{localStorage.setItem(PIN_LS,"1");}catch{} onUnlock(); },600);
+      } else {
+        setShake(true);
+        setTimeout(()=>{ setInput(""); setShake(false); },700);
+      }
+    }
+  };
+  const del=()=>setInput(x=>x.slice(0,-1));
+
+  return(
+    <div style={{position:"fixed",inset:0,background:`radial-gradient(ellipse at 50% 0%,#1a050522,transparent 60%),#06060F`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",zIndex:999,padding:24}}>
+      <div style={{textAlign:"center",marginBottom:40}}>
+        <div style={{fontSize:48,marginBottom:12}}>🫛</div>
+        <div style={{display:"flex",alignItems:"baseline",gap:4,justifyContent:"center",marginBottom:4}}>
+          <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:36,color:"#EAE8F0",letterSpacing:3,textShadow:`0 0 20px ${T.orange}66,2px 2px 0 ${T.orange}`}}>SENZU</span>
+          <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:36,color:T.orange,letterSpacing:8}}>ASIA</span>
+        </div>
+        <div style={{fontSize:10,color:T.dim,letterSpacing:"0.3em",textTransform:"uppercase"}}>Ice Water Hash Lab</div>
+      </div>
+
+      {/* Dots */}
+      <div style={{display:"flex",gap:16,marginBottom:40,animation:shake?"shake 0.5s ease":"none"}}>
+        {Array.from({length:5}).map((_,i)=>(
+          <div key={i} style={{width:16,height:16,borderRadius:"50%",background:i<input.length?(unlocking?T.green:T.orange):T.bg3,border:`2px solid ${i<input.length?(unlocking?T.green:T.orange):T.border}`,boxShadow:i<input.length?`0 0 12px ${unlocking?T.green:T.orange}`:"none",transition:"all 0.15s"}}/>
+        ))}
+      </div>
+
+      {/* Keypad */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,width:"100%",maxWidth:280}}>
+        {[1,2,3,4,5,6,7,8,9,"",0,"⌫"].map((k,i)=>(
+          <button key={i} onClick={()=>{ if(k==="⌫")del(); else if(k!=="")press(String(k)); }}
+            style={{height:72,borderRadius:16,fontSize:k==="⌫"?22:24,fontWeight:700,fontFamily:"DM Mono",
+              background:k===""?"transparent":T.bg3,
+              color:k==="⌫"?T.dim:T.white,
+              border:`1px solid ${k===""?"transparent":T.border}`,
+              boxShadow:k!==""&&k!==""?"0 2px 10px #00000066":"none",
+              opacity:k===""?0:1,
+            }}>
+            {k}
+          </button>
+        ))}
+      </div>
+
+      <div style={{marginTop:32,fontSize:11,color:T.dim,textAlign:"center"}}>Accès réservé aux membres</div>
+
+      <style>{`
+        @keyframes shake{0%,100%{transform:translateX(0);}20%{transform:translateX(-8px);}40%{transform:translateX(8px);}60%{transform:translateX(-6px);}80%{transform:translateX(6px);}}
+      `}</style>
+    </div>
+  );
+};
+
 // ── APP ───────────────────────────────────────────────────────────────────────
 export default function App(){
   const[screen,sScr]=useState("dashboard");
   const[strains,sSt]=useState([]);
-  useEffect(()=>{sbFetch("strains?select=*&order=nom.asc").then(d=>sSt(d||[])).catch(()=>{});},[]);
+  const[auth,setAuth]=useState(()=>{ try{return localStorage.getItem(PIN_LS)==="1";}catch{return false;} });
+
+  useEffect(()=>{ if(auth) sbFetch("strains?select=*&order=nom.asc").then(d=>sSt(d||[])).catch(()=>{}); },[auth]);
+
   const screens={dashboard:<Dashboard/>,session:<Session strains={strains}/>,calendar:<Calendrier/>,catalogue:<Catalogue/>};
+
+  if(!auth) return(
+    <>
+      <style>{CSS}</style>
+      <PinScreen onUnlock={()=>setAuth(true)}/>
+    </>
+  );
+
   return(
     <>
       <style>{CSS}</style>
