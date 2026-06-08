@@ -210,24 +210,49 @@ const NavBar=({active,onNav})=>(
     ))}
   </nav>
 );
+// ── DAILY CODE ────────────────────────────────────────────────────────────────
+const getDailyCode = () => {
+  const d = new Date();
+  const seed = (d.getFullYear() * 10000 + (d.getMonth()+1) * 100 + d.getDate()) * 9301 + 49297;
+  const rng = (seed % 233280) / 233280;
+  return String(Math.floor(rng * 90000) + 10000);
+};
+
 const AppHeader=()=>{
   const[t,sT]=useState(new Date());
+  const[showCode,setShowCode]=useState(false);
+  const code=getDailyCode();
   useEffect(()=>{const i=setInterval(()=>sT(new Date()),60000);return()=>clearInterval(i);},[]);
   return(
-    <div style={{background:`linear-gradient(180deg,${T.bg2},${T.bg2}CC)`,padding:"12px 20px",display:"flex",alignItems:"center",justifyContent:"center",position:"sticky",top:0,zIndex:50,backdropFilter:"blur(20px)",borderBottom:`1px solid ${T.border}`}}>
-      <div style={{position:"absolute",left:16,top:"50%",transform:"translateY(-50%)",fontSize:24}}>🫛</div>
-      <div style={{textAlign:"center"}}>
-        <div style={{display:"flex",alignItems:"baseline",gap:6,justifyContent:"center"}}>
-          <span className="nt" style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:30,fontWeight:400,color:T.white,letterSpacing:3,textShadow:`0 0 16px ${T.orange}88,0 0 4px ${T.orange}`}}>SENZU</span>
-          <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:30,fontWeight:400,color:T.orange,letterSpacing:8}}>ASIA</span>
+    <>
+      <div style={{background:`linear-gradient(180deg,${T.bg2},${T.bg2}CC)`,padding:"12px 20px",display:"flex",alignItems:"center",justifyContent:"center",position:"sticky",top:0,zIndex:50,backdropFilter:"blur(20px)",borderBottom:`1px solid ${T.border}`}}>
+        <div style={{position:"absolute",left:16,top:"50%",transform:"translateY(-50%)",fontSize:24}}>🫛</div>
+        <div style={{textAlign:"center"}}>
+          <div style={{display:"flex",alignItems:"baseline",gap:6,justifyContent:"center"}}>
+            <span className="nt" style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:30,fontWeight:400,color:T.white,letterSpacing:3,textShadow:`0 0 16px ${T.orange}88,0 0 4px ${T.orange}`}}>SENZU</span>
+            <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:30,fontWeight:400,color:T.orange,letterSpacing:8}}>ASIA</span>
+          </div>
+          <div style={{fontSize:7,color:T.dim,letterSpacing:"0.35em",textTransform:"uppercase",marginTop:-3}}>Ice Water Hash Lab</div>
         </div>
-        <div style={{fontSize:7,color:T.dim,letterSpacing:"0.35em",textTransform:"uppercase",marginTop:-3}}>Ice Water Hash Lab</div>
+        <div style={{position:"absolute",right:16,top:"50%",transform:"translateY(-50%)",display:"flex",flexDirection:"column",alignItems:"flex-end",gap:3}}>
+          <div style={{fontSize:9,color:T.dim,fontFamily:"DM Mono"}}>{t.toLocaleDateString("fr-FR",{day:"2-digit",month:"short",year:"numeric"})}</div>
+          <button onClick={()=>setShowCode(x=>!x)} style={{background:"transparent",border:"none",fontSize:14,opacity:0.4,lineHeight:1,padding:0,color:T.gold}}>🔑</button>
+        </div>
       </div>
-      <div style={{position:"absolute",right:16,top:"50%",transform:"translateY(-50%)",textAlign:"right"}}>
-        <div style={{fontSize:9,color:T.dim,fontFamily:"DM Mono"}}>{t.toLocaleDateString("fr-FR",{day:"2-digit",month:"short",year:"numeric"})}</div>
-        <div style={{fontSize:9,color:T.green}}>● Lab actif</div>
-      </div>
-    </div>
+
+      {/* Code du jour modal */}
+      {showCode&&(
+        <div style={{position:"fixed",inset:0,zIndex:400,background:"#000000CC"}} onClick={()=>setShowCode(false)}>
+          <div onClick={e=>e.stopPropagation()} style={{position:"absolute",top:70,right:12,width:220,background:T.bg2,border:`1px solid ${T.gold}44`,borderRadius:16,padding:20,boxShadow:`0 8px 40px #000000CC, 0 0 20px ${T.gold}22`,animation:"min 0.2s ease"}}>
+            <div style={{fontSize:9,color:T.dim,letterSpacing:"0.2em",textTransform:"uppercase",marginBottom:8}}>Code Senzu. du jour</div>
+            <div style={{fontSize:38,fontWeight:800,fontFamily:"DM Mono",color:T.gold,letterSpacing:6,textAlign:"center",textShadow:`0 0 20px ${T.gold}66`}}>{code}</div>
+            <div style={{fontSize:8,color:T.dim,textAlign:"center",marginTop:8}}>Valable jusqu'à minuit</div>
+            <div style={{width:"100%",height:1,background:T.border,margin:"12px 0"}}/>
+            <div style={{fontSize:8,color:T.dim,textAlign:"center",letterSpacing:"0.1em"}}>🔒 Réservé aux membres Senzu Asia</div>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 const Lbl=({c})=><div style={{fontSize:9,fontWeight:700,color:T.dim,letterSpacing:"0.14em",textTransform:"uppercase",marginBottom:5}}>{c}</div>;
