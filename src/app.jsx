@@ -25,29 +25,30 @@ const CURES = ["FreezeDryer"];
 const TYPES_BIOMASSE = ["WPFF","Live Rosin"];
 const DMINS = Array.from({length:60},(_,i)=>i+1);
 const TINIT = { duree:15, remaining:null, running:false, done:false, startedAt:null };
-const SC = ["#C0392B","#E67E22","#27AE60","#2471A3","#7D3C98","#E91E8C","#1ABC9C","#D4A843","#E74C3C","#16A085"];
+const SC = ["#FF1744","#FFB300","#00E676","#00E5FF","#D500F9","#FF6D00","#00BCD4","#FFD600","#F50057","#69F0AE"];
 
-const T = { bg:"#06060F",bg2:"#0A0A18",bg3:"#0E0E22",card:"#0B0B1A",border:"#1C1C3A",orange:"#C0392B",gold:"#D4A843",green:"#27AE60",white:"#EAE8F0",dim:"#4A4A7A",ink:"#8080B0",danger:"#E74C3C",aura:"#FFD700",purple:"#7D3C98" };
+const T = { bg:"#090A0F",bg2:"#0D0E17",bg3:"#1A1A24",card:"rgba(20,20,30,0.65)",border:"rgba(255,255,255,0.07)",orange:"#FF1744",gold:"#FFB300",green:"#00E676",white:"#F8F9FA",dim:"rgba(248,249,250,0.35)",ink:"rgba(248,249,250,0.55)",danger:"#FF1744",aura:"#FFD700",purple:"#D500F9",cyan:"#00E5FF" };
 
 const CSS = `
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,600;0,700;0,800;0,900;1,800;1,900&family=DM+Mono:wght@400;500;700&family=Bebas+Neue&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap');
 *{box-sizing:border-box;margin:0;padding:0;}
-html,body,#root{background:#06060F;color:#EAE8F0;font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden;}
-::-webkit-scrollbar{width:2px;} ::-webkit-scrollbar-thumb{background:#1C1C3A;}
-input,select,textarea{background:#0E0E22;border:1px solid #1C1C3A;color:#EAE8F0;font-family:'DM Sans',sans-serif;font-size:15px;border-radius:10px;padding:12px 16px;width:100%;outline:none;-webkit-appearance:none;appearance:none;}
-input:focus,select:focus,textarea:focus{border-color:#C0392B;}
-select option{background:#0A0A18;}
-button{cursor:pointer;font-family:'DM Sans',sans-serif;border:none;outline:none;transition:all 0.15s;}
+html,body,#root{background:#090A0F;color:#F8F9FA;font-family:'Inter',sans-serif;min-height:100vh;overflow-x:hidden;}
+::-webkit-scrollbar{width:2px;} ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);}
+input,select,textarea{background:#1A1A24;border:1px solid rgba(255,255,255,0.08);color:#F8F9FA;font-family:'Inter',sans-serif;font-size:15px;border-radius:10px;padding:12px 16px;width:100%;outline:none;-webkit-appearance:none;appearance:none;}
+input:focus,select:focus,textarea:focus{border-color:#00E5FF;box-shadow:0 0 0 2px rgba(0,229,255,0.1);}
+select option{background:#0D0E17;}
+button{cursor:pointer;font-family:'Inter',sans-serif;border:none;outline:none;transition:all 0.2s cubic-bezier(0.25,0.8,0.25,1);}
 .ww{overflow:hidden;position:relative;cursor:grab;user-select:none;}
 .wi{display:flex;flex-direction:column;}
-.witem{display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-weight:700;flex-shrink:0;}
-.wft{position:absolute;top:0;left:0;right:0;height:55px;background:linear-gradient(180deg,#0B0B1A,transparent);pointer-events:none;z-index:3;}
-.wfb{position:absolute;bottom:0;left:0;right:0;height:55px;background:linear-gradient(0deg,#0B0B1A,transparent);pointer-events:none;z-index:3;}
-.wsel{position:absolute;top:50%;left:8px;right:8px;height:44px;transform:translateY(-50%);border-top:1px solid #C0392B66;border-bottom:1px solid #C0392B66;pointer-events:none;z-index:2;border-radius:8px;background:#C0392B08;}
+.witem{display:flex;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;font-weight:700;flex-shrink:0;}
+.wft{position:absolute;top:0;left:0;right:0;height:55px;background:linear-gradient(180deg,#1A1A24,transparent);pointer-events:none;z-index:3;}
+.wfb{position:absolute;bottom:0;left:0;right:0;height:55px;background:linear-gradient(0deg,#1A1A24,transparent);pointer-events:none;z-index:3;}
+.wsel{position:absolute;top:50%;left:8px;right:8px;height:44px;transform:translateY(-50%);border-top:1px solid rgba(0,229,255,0.3);border-bottom:1px solid rgba(0,229,255,0.3);pointer-events:none;z-index:2;border-radius:8px;background:rgba(0,229,255,0.04);}
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
 @keyframes tpulse{0%,100%{opacity:1;}50%{opacity:0.35;}}
 @keyframes aura{0%,100%{box-shadow:0 0 20px #FFD70055,0 0 40px #FFD70022;}50%{box-shadow:0 0 40px #FFD700AA,0 0 80px #FFD70044;}}
 @keyframes rglow{0%,100%{text-shadow:0 0 20px #FFD700,0 0 40px #FFD700;}50%{text-shadow:0 0 50px #FFD700,0 0 100px #FFD700;}}
+@keyframes cglow{0%,100%{text-shadow:0 0 12px rgba(0,229,255,0.6);}50%{text-shadow:0 0 24px rgba(0,229,255,0.9),0 0 48px rgba(0,229,255,0.4);}}
 @keyframes neon{0%,100%{opacity:1;}93%{opacity:0.8;}96%{opacity:0.9;}}
 @keyframes pin{from{opacity:0;transform:translateX(40px);}to{opacity:1;transform:translateX(0);}}
 @keyframes dup{from{transform:translateY(100%);}to{transform:translateY(0);}}
@@ -200,12 +201,12 @@ const FloatingTimers=()=>{
 // ── UI ATOMS ──────────────────────────────────────────────────────────────────
 const NAV=[{id:"dashboard",icon:"⛩️",label:"Dashboard"},{id:"session",icon:"🏮",label:"Session"},{id:"calendar",icon:"🪷",label:"Calendrier"},{id:"utilisateurs",icon:"👥",label:"Utilisateurs"}];
 const NavBar=({active,onNav})=>(
-  <nav style={{position:"fixed",bottom:0,zIndex:100,background:`linear-gradient(180deg,transparent,${T.bg2}F0)`,backdropFilter:"blur(24px)",borderTop:`1px solid ${T.border}`,display:"flex",justifyContent:"space-around",padding:"10px 0 max(18px,env(safe-area-inset-bottom))",left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:768}}>
+  <nav style={{position:"fixed",bottom:0,zIndex:100,background:"rgba(9,10,15,0.88)",backdropFilter:"blur(24px)",WebkitBackdropFilter:"blur(24px)",borderTop:"1px solid rgba(255,255,255,0.06)",display:"flex",justifyContent:"space-around",padding:"10px 0 max(18px,env(safe-area-inset-bottom))",left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:768}}>
     {NAV.map(n=>(
-      <button key={n.id} onClick={()=>onNav(n.id)} style={{background:"none",border:"none",display:"flex",flexDirection:"column",alignItems:"center",gap:3,padding:"4px 14px",opacity:active===n.id?1:0.35,transition:"all 0.2s"}}>
-        <span style={{fontSize:active===n.id?24:19,transition:"font-size 0.2s"}}>{n.icon}</span>
-        <span style={{fontSize:9,color:active===n.id?T.gold:T.dim,fontWeight:active===n.id?700:400,letterSpacing:0.6,textTransform:"uppercase"}}>{n.label}</span>
-        {active===n.id&&<div style={{width:22,height:2,background:T.orange,borderRadius:1,boxShadow:`0 0 8px ${T.orange}`}}/>}
+      <button key={n.id} onClick={()=>onNav(n.id)} style={{background:"none",border:"none",display:"flex",flexDirection:"column",alignItems:"center",gap:3,padding:"4px 14px",opacity:active===n.id?1:0.4,transition:"all 0.2s"}}>
+        <span style={{fontSize:active===n.id?22:18,transition:"font-size 0.2s"}}>{n.icon}</span>
+        <span style={{fontSize:9,color:active===n.id?T.cyan:T.dim,fontWeight:active===n.id?700:400,letterSpacing:0.6,textTransform:"uppercase",fontFamily:"'Inter',sans-serif",textShadow:active===n.id?`0 0 8px ${T.cyan}88`:"none"}}>{n.label}</span>
+        {active===n.id&&<div style={{width:20,height:2,background:T.cyan,borderRadius:1,boxShadow:`0 0 8px ${T.cyan}`}}/>}
       </button>
     ))}
   </nav>
@@ -225,29 +226,27 @@ const AppHeader=()=>{
   useEffect(()=>{const i=setInterval(()=>sT(new Date()),60000);return()=>clearInterval(i);},[]);
   return(
     <>
-      <div style={{background:`linear-gradient(180deg,${T.bg2},${T.bg2}CC)`,padding:"12px 20px",display:"flex",alignItems:"center",justifyContent:"center",position:"sticky",top:0,zIndex:50,backdropFilter:"blur(20px)",borderBottom:`1px solid ${T.border}`}}>
+      <div style={{background:"rgba(9,10,15,0.85)",padding:"12px 20px",display:"flex",alignItems:"center",justifyContent:"center",position:"sticky",top:0,zIndex:50,backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",borderBottom:"1px solid rgba(255,255,255,0.06)"}}>
         <div style={{position:"absolute",left:16,top:"50%",transform:"translateY(-50%)",fontSize:24}}>🫛</div>
         <div style={{textAlign:"center"}}>
           <div style={{display:"flex",alignItems:"baseline",gap:6,justifyContent:"center"}}>
-            <span className="nt" style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:30,fontWeight:400,color:T.white,letterSpacing:3,textShadow:`0 0 16px ${T.orange}88,0 0 4px ${T.orange}`}}>SENZU</span>
-            <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:30,fontWeight:400,color:T.orange,letterSpacing:8}}>ASIA</span>
+            <span className="nt" style={{fontFamily:"'Oswald',sans-serif",fontSize:28,fontWeight:700,color:T.white,letterSpacing:4}}> SENZU</span>
+            <span style={{fontFamily:"'Oswald',sans-serif",fontSize:28,fontWeight:700,color:T.cyan,letterSpacing:8,textShadow:`0 0 12px ${T.cyan}66`}}>ASIA</span>
           </div>
-          <div style={{fontSize:7,color:T.dim,letterSpacing:"0.35em",textTransform:"uppercase",marginTop:-3}}>Ice Water Hash Lab</div>
+          <div style={{fontSize:7,color:T.dim,letterSpacing:"0.35em",textTransform:"uppercase",marginTop:-2}}>Ice Water Hash Lab</div>
         </div>
         <div style={{position:"absolute",right:16,top:"50%",transform:"translateY(-50%)",display:"flex",flexDirection:"column",alignItems:"flex-end",gap:3}}>
-          <div style={{fontSize:9,color:T.dim,fontFamily:"DM Mono"}}>{t.toLocaleDateString("fr-FR",{day:"2-digit",month:"short",year:"numeric"})}</div>
+          <div style={{fontSize:9,color:T.dim,fontFamily:"'Rajdhani',sans-serif"}}>{t.toLocaleDateString("fr-FR",{day:"2-digit",month:"short",year:"numeric"})}</div>
           <button onClick={()=>setShowCode(x=>!x)} style={{background:"transparent",border:"none",fontSize:14,opacity:0.4,lineHeight:1,padding:0,color:T.gold}}>🔑</button>
         </div>
       </div>
-
-      {/* Code du jour modal */}
       {showCode&&(
         <div style={{position:"fixed",inset:0,zIndex:400,background:"#000000CC"}} onClick={()=>setShowCode(false)}>
-          <div onClick={e=>e.stopPropagation()} style={{position:"absolute",top:70,right:12,width:220,background:T.bg2,border:`1px solid ${T.gold}44`,borderRadius:16,padding:20,boxShadow:`0 8px 40px #000000CC, 0 0 20px ${T.gold}22`,animation:"min 0.2s ease"}}>
+          <div onClick={e=>e.stopPropagation()} style={{position:"absolute",top:70,right:12,width:220,background:"rgba(20,20,30,0.95)",border:`1px solid ${T.gold}44`,borderRadius:16,padding:20,boxShadow:`0 8px 40px #000000CC, 0 0 20px ${T.gold}22`,animation:"min 0.2s ease",backdropFilter:"blur(20px)"}}>
             <div style={{fontSize:9,color:T.dim,letterSpacing:"0.2em",textTransform:"uppercase",marginBottom:8}}>Code Senzu. du jour</div>
-            <div style={{fontSize:38,fontWeight:800,fontFamily:"DM Mono",color:T.gold,letterSpacing:6,textAlign:"center",textShadow:`0 0 20px ${T.gold}66`}}>{code}</div>
+            <div style={{fontSize:38,fontWeight:700,fontFamily:"'Rajdhani',sans-serif",color:T.gold,letterSpacing:6,textAlign:"center",textShadow:`0 0 20px ${T.gold}66`}}>{code}</div>
             <div style={{fontSize:8,color:T.dim,textAlign:"center",marginTop:8}}>Valable jusqu'à minuit</div>
-            <div style={{width:"100%",height:1,background:T.border,margin:"12px 0"}}/>
+            <div style={{width:"100%",height:1,background:"rgba(255,255,255,0.06)",margin:"12px 0"}}/>
             <div style={{fontSize:8,color:T.dim,textAlign:"center",letterSpacing:"0.1em"}}>🔒 Réservé aux membres Senzu Asia</div>
           </div>
         </div>
@@ -255,16 +254,16 @@ const AppHeader=()=>{
     </>
   );
 };
-const Lbl=({c})=><div style={{fontSize:9,fontWeight:700,color:T.dim,letterSpacing:"0.14em",textTransform:"uppercase",marginBottom:5}}>{c}</div>;
+const Lbl=({c})=><div style={{fontSize:9,fontWeight:600,color:T.dim,letterSpacing:"0.14em",textTransform:"uppercase",marginBottom:5,fontFamily:"'Inter',sans-serif"}}>{c}</div>;
 const Fld=({label,children})=><div style={{marginBottom:14}}><Lbl c={label}/>{children}</div>;
-const Btn=({c:children,onClick,col=T.orange,disabled,s={}})=><button onClick={onClick} disabled={disabled} style={{background:disabled?T.border:`linear-gradient(135deg,${col},${col}BB)`,color:disabled?T.dim:"#fff",fontWeight:800,fontSize:15,padding:"14px 24px",borderRadius:12,width:"100%",boxShadow:disabled?"none":`0 4px 20px ${col}44`,opacity:disabled?0.5:1,...s}}>{children}</button>;
-const BOL=({c:children,onClick,col=T.orange,s={}})=><button onClick={onClick} style={{background:"transparent",color:col,border:`1.5px solid ${col}`,fontWeight:700,fontSize:14,padding:"13px 20px",borderRadius:12,width:"100%",...s}}>{children}</button>;
-const Bdg=({c:children,col=T.gold})=><span style={{background:col+"22",color:col,border:`1px solid ${col}44`,borderRadius:6,padding:"2px 10px",fontSize:11,fontWeight:700,whiteSpace:"nowrap"}}>{children}</span>;
-const Crd=({children,s={},glow,col})=><div style={{background:T.card,border:`1px solid ${glow?(col||T.orange)+"66":T.border}`,borderRadius:16,padding:16,marginBottom:12,animation:glow?"aura 2s infinite":"none",...s}}>{children}</div>;
-const STL=({icon,text,col=T.orange})=>(
+const Btn=({c:children,onClick,col=T.cyan,disabled,s={}})=><button onClick={onClick} disabled={disabled} style={{background:disabled?"rgba(255,255,255,0.05)":`linear-gradient(135deg,${col}22,${col}11)`,color:disabled?T.dim:col,fontWeight:700,fontSize:14,padding:"13px 24px",borderRadius:10,width:"100%",border:`1px solid ${disabled?"rgba(255,255,255,0.05)":col+"66"}`,boxShadow:disabled?"none":`0 0 12px ${col}22`,opacity:disabled?0.5:1,letterSpacing:"0.05em",...s}}>{children}</button>;
+const BOL=({c:children,onClick,col=T.dim,s={}})=><button onClick={onClick} style={{background:"transparent",color:col,border:`1px solid ${col}44`,fontWeight:600,fontSize:13,padding:"12px 20px",borderRadius:10,width:"100%",...s}}>{children}</button>;
+const Bdg=({c:children,col=T.gold})=><span style={{background:col+"18",color:col,border:`1px solid ${col}33`,borderRadius:5,padding:"2px 9px",fontSize:11,fontWeight:600,whiteSpace:"nowrap"}}>{children}</span>;
+const Crd=({children,s={},glow,col})=><div style={{background:"rgba(20,20,30,0.65)",backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)",border:glow?`1px solid ${(col||T.cyan)+"44"}`:"1px solid rgba(255,255,255,0.06)",borderRadius:14,padding:16,marginBottom:12,boxShadow:"0 8px 32px rgba(0,0,0,0.4)",borderTop:glow?`1px solid ${(col||T.cyan)+"66"}`:"1px solid rgba(255,255,255,0.09)",...s}}>{children}</div>;
+const STL=({icon,text,col=T.cyan})=>(
   <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
-    <div style={{width:3,height:18,background:col,borderRadius:2}}/>
-    <span style={{fontSize:11,fontWeight:800,color:col,letterSpacing:"0.12em",textTransform:"uppercase"}}>{icon} {text}</span>
+    <div style={{width:3,height:18,background:col,borderRadius:2,boxShadow:`0 0 8px ${col}88`}}/>
+    <span style={{fontSize:11,fontWeight:700,color:col,letterSpacing:"0.15em",textTransform:"uppercase",fontFamily:"'Oswald',sans-serif"}}>{icon} {text}</span>
   </div>
 );
 const Step=({label,value,onChange,min=0,max=99,step=1,unit=""})=>(
