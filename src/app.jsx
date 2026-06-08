@@ -198,7 +198,7 @@ const FloatingTimers=()=>{
 };
 
 // ── UI ATOMS ──────────────────────────────────────────────────────────────────
-const NAV=[{id:"dashboard",icon:"⛩️",label:"Dashboard"},{id:"session",icon:"🏮",label:"Session"},{id:"calendar",icon:"🪷",label:"Calendrier"},{id:"catalogue",icon:"🏺",label:"Catalogue"}];
+const NAV=[{id:"dashboard",icon:"⛩️",label:"Dashboard"},{id:"session",icon:"🏮",label:"Session"},{id:"calendar",icon:"🪷",label:"Calendrier"},{id:"utilisateurs",icon:"👥",label:"Utilisateurs"}];
 const NavBar=({active,onNav})=>(
   <nav style={{position:"fixed",bottom:0,zIndex:100,background:`linear-gradient(180deg,transparent,${T.bg2}F0)`,backdropFilter:"blur(24px)",borderTop:`1px solid ${T.border}`,display:"flex",justifyContent:"space-around",padding:"10px 0 max(18px,env(safe-area-inset-bottom))",left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:768}}>
     {NAV.map(n=>(
@@ -612,6 +612,9 @@ const Dashboard=()=>{
           </div>
         </div>
       )}
+
+      {/* ── CATALOGUE SECTION ── */}
+      <CatalogueSection/>
     </div>
   );
 };
@@ -1179,6 +1182,135 @@ const CatalogueModal=({sel,selSt,selC,sessions,pesees,getR,fRef,upload,editing,s
   );
 };
 
+// ── CATALOGUE SECTION (intégrée dans Dashboard) ───────────────────────────────
+const CatalogueSection=()=>{
+  const[strains,sSt]=useState([]);
+  const[sessions,sSe]=useState([]);
+  const[pesees,sPe]=useState([]);
+  const[loading,sl]=useState(true);
+  const[sel,sSel]=useState(null);
+  const[editing,sEd]=useState(null);
+  const[ed,sED]=useState({});
+  const[saving,sSav]=useState(false);
+  const[showP,sShP]=useState(false);
+  const[nP,sNP]=useState({strain:"",m90:0,m45:0});
+  const fRef=useRef();
+
+  useEffect(()=>{
+    Promise.all([sbFetch("strains?select=*&order=nom.asc"),sbFetch("sessions?select=*"),sbFetch("pesees?select=*")])
+      .then(([a,b,c])=>{sSt(a||[]);sSe(b||[]);sPe(c||[]);}).catch(()=>{}).finally(()=>sl(false));
+  },[]);
+
+  const allSt=useMemo(()=>{
+    if(strains.length>0)return strains;
+    const seen=new Set();
+    return sessions.filter(s=>{if(s.strain&&!seen.has(s.strain)){seen.add(s.strain);return true;}return false;}).map(s=>({nom:s.strain}));
+  },[strains,sessions]);
+
+  const getR=(nom)=>{
+    const se=sessions.filter(s=>s.strain===nom);
+    const pe=pesees.filter(p=>se.find(s=>s.id===p.session_id));
+    const b=se.reduce((a,s)=>a+(parseFloat(s.biomasse_kg)||0),0);
+    const po=pe.reduce((a,p)=>a+(parseFloat(p.poids_sec_g)||0),0);
+    return b>0?((po/(b*1000))*100).toFixed(2):null;
+  };
+
+  const saveEdit=async()=>{
+    if(!editing)return;sSav(true);
+    try{
+      const ex=strains.find(s=>s.nom===editing);
+      if(ex)await sbFetch(`strains?nom=eq.${encodeURIComponent(editing)}`,{method:"PATCH",prefer:"return=minimal",body:JSON.stringify(ed)});
+      else await sbFetch("strains",{method:"POST",prefer:"return=minimal",body:JSON.stringify({nom:editing,...ed})});
+      const st=await sbFetch("strains?select=*&order=nom.asc");sSt(st||[]);sEd(null);
+    }catch(e){alert("Erreur: "+e.message);}
+    finally{sSav(false);}
+  };
+
+  const upload=async(e,nom)=>{
+    const f=e.target.files[0];if(!f)return;
+    const ext=f.name.split(".").pop();
+    const path=`strains/${nom.replace(/\s/g,"_")}_${Date.now()}.${ext}`;
+    try{
+      const r=await fetch(`${SB_URL}/storage/v1/object/strain-photos/${path}`,{method:"POST",headers:{apikey:SB_KEY,Authorization:`Bearer ${SB_KEY}`,"Content-Type":f.type},body:f});
+      if(!r.ok)throw new Error(await r.text());
+      const url=`${SB_URL}/storage/v1/object/public/strain-photos/${path}`;
+      await sbFetch(`strains?nom=eq.${encodeURIComponent(nom)}`,{method:"PATCH",prefer:"return=minimal",body:JSON.stringify({photo_url:url})});
+      const st=await sbFetch("strains?select=*&order=nom.asc");sSt(st||[]);
+    }catch(e){alert("Upload: "+e.message);}
+  };
+
+  const addPesee=async()=>{
+    if(!nP.strain)return;sSav(true);
+    try{
+      const se=sessions.filter(s=>s.strain===nP.strain);
+      const last=se[se.length-1];
+      if(!last){alert("Aucune session pour cette strain.");return;}
+      const rows=[];
+      if(parseFloat(nP.m90)>0)rows.push({session_id:last.id,micron:"90µ",poids_sec_g:parseFloat(nP.m90)});
+      if(parseFloat(nP.m45)>0)rows.push({session_id:last.id,micron:"45µ",poids_sec_g:parseFloat(nP.m45)});
+      if(rows.length>0)await sbFetch("pesees",{method:"POST",prefer:"return=minimal",body:JSON.stringify(rows)});
+      const p=await sbFetch("pesees?select=*");sPe(p||[]);sShP(false);sNP({strain:"",m90:0,m45:0});
+    }catch(e){alert("Erreur: "+e.message);}
+    finally{sSav(false);}
+  };
+
+  if(loading)return null;
+  const selSt=sel?allSt.find(s=>(s.nom||s)===sel):null;
+  const selC=selSt?SC[allSt.indexOf(selSt)%SC.length]:T.orange;
+
+  return(
+    <div style={{marginTop:24}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+        <STL icon="🏺" text="CATALOGUE" col={T.gold}/>
+        <button onClick={()=>sShP(x=>!x)} style={{background:T.gold+"22",border:`1px solid ${T.gold}44`,borderRadius:10,padding:"6px 14px",color:T.gold,fontWeight:700,fontSize:11}}>⚖ Pesées</button>
+      </div>
+      {showP&&(
+        <Crd s={{marginBottom:16,border:`1px solid ${T.gold}44`}}>
+          <STL icon="⚖" text="PESÉES FREEZE DRYER" col={T.gold}/>
+          <Fld label="Strain"><select value={nP.strain} onChange={e=>sNP(x=>({...x,strain:e.target.value}))}><option value="">Sélectionner...</option>{allSt.map(s=><option key={s.nom||s}>{s.nom||s}</option>)}</select></Fld>
+          <Fld label="90µ — Poids (g)">
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <button onClick={()=>sNP(x=>({...x,m90:Math.max(0,parseFloat(x.m90||0)-0.1).toFixed(1)}))} style={{width:44,height:44,borderRadius:10,background:T.bg3,border:`1px solid ${T.border}`,color:T.white,fontSize:20,fontWeight:700,flexShrink:0}}>−</button>
+              <input type="number" value={nP.m90} onChange={e=>sNP(x=>({...x,m90:e.target.value}))} style={{textAlign:"center",fontSize:22,fontWeight:800,color:T.orange,fontFamily:"DM Mono"}} min="0" step="0.1"/>
+              <button onClick={()=>sNP(x=>({...x,m90:parseFloat((parseFloat(x.m90||0)+0.1).toFixed(1))}))} style={{width:44,height:44,borderRadius:10,background:T.orange,color:"#fff",fontSize:20,fontWeight:700,flexShrink:0}}>+</button>
+            </div>
+          </Fld>
+          <Fld label="45µ / FS — Poids (g)">
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <button onClick={()=>sNP(x=>({...x,m45:Math.max(0,parseFloat(x.m45||0)-0.1).toFixed(1)}))} style={{width:44,height:44,borderRadius:10,background:T.bg3,border:`1px solid ${T.border}`,color:T.white,fontSize:20,fontWeight:700,flexShrink:0}}>−</button>
+              <input type="number" value={nP.m45} onChange={e=>sNP(x=>({...x,m45:e.target.value}))} style={{textAlign:"center",fontSize:22,fontWeight:800,color:T.orange,fontFamily:"DM Mono"}} min="0" step="0.1"/>
+              <button onClick={()=>sNP(x=>({...x,m45:parseFloat((parseFloat(x.m45||0)+0.1).toFixed(1))}))} style={{width:44,height:44,borderRadius:10,background:T.orange,color:"#fff",fontSize:20,fontWeight:700,flexShrink:0}}>+</button>
+            </div>
+          </Fld>
+          <div style={{display:"flex",gap:10}}>
+            <BOL c="Annuler" onClick={()=>sShP(false)} col={T.dim}/>
+            <Btn c={saving?"Sauvegarde...":"💾 Sauvegarder"} onClick={addPesee} disabled={saving} col={T.gold}/>
+          </div>
+        </Crd>
+      )}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}}>
+        {allSt.map((s,i)=>{
+          const nom=s.nom||s,r=getR(nom),c=SC[i%SC.length],rec=r&&parseFloat(r)>4;
+          return(
+            <div key={nom} onClick={()=>sSel(nom)} style={{background:`linear-gradient(160deg,${T.card},${c}18)`,border:`2px solid ${rec?T.aura:c+"44"}`,borderRadius:16,overflow:"hidden",cursor:"pointer",animation:rec?"aura 2.5s infinite":"none"}}>
+              <div style={{height:140,background:s.photo_url?`url(${s.photo_url}) center/cover`:`linear-gradient(135deg,${c}33,${T.bg3})`,display:"flex",alignItems:"center",justifyContent:"center",position:"relative"}}>
+                {!s.photo_url&&<div style={{fontSize:40,opacity:0.2}}>🌿</div>}
+                {rec&&<div style={{position:"absolute",top:8,right:8,background:T.aura,borderRadius:6,padding:"2px 8px",fontSize:9,fontWeight:800,color:"#000"}}>★ RECORD</div>}
+              </div>
+              <div style={{padding:"12px 14px"}}>
+                <div style={{fontSize:17,fontWeight:900,fontStyle:"italic",color:T.white,textShadow:`1px 1px 0 ${c}`,marginBottom:4}}>{nom}</div>
+                <div style={{fontSize:28,fontWeight:800,fontFamily:"DM Mono",color:rec?T.aura:c,lineHeight:1,animation:rec?"rglow 2s infinite":"none"}}>{r?`${r}%`:"—"}</div>
+                {s.odeur&&<div style={{fontSize:11,color:T.dim,marginTop:4}}>👃 {s.odeur}</div>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {sel&&selSt&&<CatalogueModal sel={sel} selSt={selSt} selC={selC} sessions={sessions} pesees={pesees} getR={getR} fRef={fRef} upload={upload} editing={editing} sEd={sEd} ed={ed} sED={sED} saving={saving} saveEdit={saveEdit} sSel={sSel} TYPES_PRODUIT={TYPES_PRODUIT}/>}
+    </div>
+  );
+};
+
 const Catalogue=()=>{
   const[strains,sSt]=useState([]);
   const[sessions,sSe]=useState([]);
@@ -1310,6 +1442,101 @@ const Catalogue=()=>{
   );
 };
 
+// ── UTILISATEURS ─────────────────────────────────────────────────────────────
+const Utilisateurs=()=>{
+  const[events,setEvents]=useState([]);
+  const[loading,setLoading]=useState(true);
+
+  useEffect(()=>{
+    sbFetch("analytics_events?select=*&order=created_at.desc&limit=500")
+      .then(d=>setEvents(d||[])).catch(()=>setEvents([])).finally(()=>setLoading(false));
+  },[]);
+
+  const totalEvents=events.length;
+  const uniqueUsers=new Set(events.map(e=>e.user_id).filter(Boolean)).size;
+  const byType=events.reduce((acc,e)=>{acc[e.event_type]=(acc[e.event_type]||0)+1;return acc;},{});
+  const byProdType=events.filter(e=>e.product_type).reduce((acc,e)=>{acc[e.product_type]=(acc[e.product_type]||0)+1;return acc;},{});
+  const totalProd=Object.values(byProdType).reduce((a,b)=>a+b,0)||1;
+
+  const funnelSteps=[
+    {key:"view_product",label:"Vue produit",icon:"👁"},
+    {key:"click_wpff",label:"Click WPFF",icon:"🌿"},
+    {key:"click_rosin",label:"Click Rosin",icon:"🔥"},
+    {key:"start_payment",label:"Paiement initié",icon:"💳"},
+    {key:"complete_payment",label:"Paiement complété",icon:"✅"},
+  ];
+  const maxFunnel=Math.max(1,...funnelSteps.map(s=>byType[s.key]||0));
+
+  if(loading)return<Load/>;
+
+  return(
+    <div style={{padding:"0 14px",paddingBottom:100,animation:"fadeIn 0.3s"}}>
+      <STL icon="👥" text="ANALYTICS SENZUONEBOT"/>
+      {totalEvents===0?(
+        <Crd>
+          <div style={{textAlign:"center",padding:"32px 0"}}>
+            <div style={{fontSize:40,marginBottom:16}}>📡</div>
+            <div style={{fontSize:16,fontWeight:800,color:T.white,marginBottom:8}}>En attente de données</div>
+            <div style={{fontSize:12,color:T.dim,lineHeight:1.7,maxWidth:280,margin:"0 auto"}}>
+              Les analytics apparaîtront ici dès que le dev de SenzuOneBot enverra des events vers la table <span style={{color:T.gold,fontFamily:"DM Mono",fontSize:11}}>analytics_events</span>.
+            </div>
+            <div style={{marginTop:20,background:T.bg3,borderRadius:12,padding:14,textAlign:"left",border:`1px solid ${T.border}`}}>
+              <div style={{fontSize:9,color:T.dim,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>Table SQL requise</div>
+              <div style={{fontFamily:"DM Mono",fontSize:10,color:T.gold,lineHeight:1.8}}>
+                analytics_events<br/>
+                ├ user_id · event_type<br/>
+                ├ product_nom · product_type<br/>
+                └ session_id · metadata
+              </div>
+            </div>
+          </div>
+        </Crd>
+      ):(
+        <>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
+            {[[uniqueUsers,"Utilisateurs uniques",T.purple],[totalEvents,"Events totaux",T.orange]].map(([v,l,c])=>(
+              <Crd key={l} s={{textAlign:"center"}}>
+                <div style={{fontSize:9,color:T.dim,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:6}}>{l}</div>
+                <div style={{fontSize:36,fontWeight:800,fontFamily:"DM Mono",color:c,lineHeight:1}}>{v}</div>
+              </Crd>
+            ))}
+          </div>
+          {totalProd>1&&(
+            <Crd s={{marginBottom:12}}>
+              <STL icon="📊" text="INTÉRÊT PRODUIT" col={T.gold}/>
+              {Object.entries(byProdType).sort((a,b)=>b[1]-a[1]).map(([type,cnt],i)=>(
+                <div key={type} style={{marginBottom:10}}>
+                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+                    <span style={{fontSize:13,color:T.white,fontWeight:700}}>{type}</span>
+                    <span style={{fontSize:13,color:SC[i%SC.length],fontWeight:800,fontFamily:"DM Mono"}}>{((cnt/totalProd)*100).toFixed(0)}% · {cnt}</span>
+                  </div>
+                  <div style={{height:6,background:T.border,borderRadius:3}}><div style={{height:"100%",width:`${(cnt/totalProd)*100}%`,background:SC[i%SC.length],borderRadius:3,transition:"width 0.5s",boxShadow:`0 0 8px ${SC[i%SC.length]}66`}}/></div>
+                </div>
+              ))}
+            </Crd>
+          )}
+          <Crd>
+            <STL icon="🔽" text="FUNNEL DE CONVERSION" col={T.green}/>
+            {funnelSteps.map((step,i)=>{
+              const cnt=byType[step.key]||0;
+              const pct=maxFunnel>0?((cnt/maxFunnel)*100):0;
+              return(
+                <div key={step.key} style={{marginBottom:10}}>
+                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+                    <span style={{fontSize:12,color:T.ink}}>{step.icon} {step.label}</span>
+                    <span style={{fontSize:12,color:cnt>0?T.green:T.dim,fontWeight:700,fontFamily:"DM Mono"}}>{cnt}</span>
+                  </div>
+                  <div style={{height:5,background:T.border,borderRadius:3}}><div style={{height:"100%",width:`${pct}%`,background:`linear-gradient(90deg,${T.green},${T.green}88)`,borderRadius:3,transition:"width 0.5s"}}/></div>
+                </div>
+              );
+            })}
+          </Crd>
+        </>
+      )}
+    </div>
+  );
+};
+
 // ── PIN SCREEN ────────────────────────────────────────────────────────────────
 const PIN_CODE = "73698";
 const PIN_LS   = "sz_auth";
@@ -1386,7 +1613,7 @@ export default function App(){
 
   useEffect(()=>{ if(auth) sbFetch("strains?select=*&order=nom.asc").then(d=>sSt(d||[])).catch(()=>{}); },[auth]);
 
-  const screens={dashboard:<Dashboard/>,session:<Session strains={strains}/>,calendar:<Calendrier/>,catalogue:<Catalogue/>};
+  const screens={dashboard:<Dashboard/>,session:<Session strains={strains}/>,calendar:<Calendrier/>,utilisateurs:<Utilisateurs/>};
 
   if(!auth) return(
     <>
