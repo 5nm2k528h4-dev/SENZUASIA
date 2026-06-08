@@ -1047,6 +1047,113 @@ const Calendrier=()=>{
 };
 
 // ── CATALOGUE ─────────────────────────────────────────────────────────────────
+const CatalogueModal=({sel,selSt,selC,sessions,pesees,getR,fRef,upload,editing,sEd,ed,sED,saving,saveEdit,sSel,TYPES_PRODUIT})=>{
+  const[prodTab,setProdTab]=useState("wpff");
+  const r=getR(sel);
+  const rec=r&&parseFloat(r)>4;
+  const seSel=sessions.filter(s=>s.strain===sel);
+  const peSel=pesees.filter(p=>seSel.find(s=>s.id===p.session_id));
+  const byMicron={};peSel.forEach(p=>{if(!byMicron[p.micron])byMicron[p.micron]=0;byMicron[p.micron]+=parseFloat(p.poids_sec_g)||0;});
+  return(
+    <div style={{position:"fixed",inset:0,zIndex:500,background:"#000000AA",display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={()=>{sSel(null);sEd(null);}}>
+      <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:768,background:`linear-gradient(160deg,${T.bg2},${selC}18)`,border:`2px solid ${selC}88`,borderRadius:"24px 24px 0 0",maxHeight:"90vh",overflowY:"auto",animation:"dup 0.3s ease",paddingBottom:"max(24px,env(safe-area-inset-bottom))"}}>
+        <div style={{height:200,background:selSt.photo_url?`url(${selSt.photo_url}) center/cover`:`linear-gradient(135deg,${selC}44,${T.bg3})`,display:"flex",alignItems:"flex-end",justifyContent:"space-between",padding:20,position:"relative"}}>
+          <div style={{width:40,height:4,background:T.white+"44",borderRadius:2,position:"absolute",top:12,left:"50%",transform:"translateX(-50%)"}}/>
+          {!selSt.photo_url&&<div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:70,opacity:0.15}}>🌿</div>}
+          <div>
+            <div style={{fontSize:30,fontWeight:900,fontStyle:"italic",color:T.white,textShadow:`2px 2px 0 ${selC},0 0 20px ${selC}88`}}>{sel}</div>
+            {selSt.genetique&&<div style={{fontSize:13,color:T.ink}}>{selSt.genetique}</div>}
+          </div>
+          <input ref={fRef} type="file" accept="image/*" onChange={e=>upload(e,sel)} style={{display:"none"}}/>
+          <button onClick={()=>fRef.current.click()} style={{background:`${T.bg2}CC`,border:`1px solid ${selC}`,borderRadius:10,padding:"8px 14px",color:selC,fontWeight:700,fontSize:12}}>📷 Photo</button>
+        </div>
+        <div style={{padding:20}}>
+          <div style={{display:"flex",gap:8,marginBottom:16}}>
+            {[["wpff","🧊 WPFF"],["rosin","🔥 Live Rosin"]].map(([id,lbl])=>(
+              <button key={id} onClick={()=>setProdTab(id)} style={{flex:1,padding:"10px",borderRadius:12,fontWeight:800,fontSize:13,background:prodTab===id?selC+"33":T.bg3,color:prodTab===id?selC:T.dim,border:`2px solid ${prodTab===id?selC:T.border}`}}>{lbl}</button>
+            ))}
+          </div>
+          {prodTab==="wpff"&&(
+            <div style={{marginBottom:16}}>
+              <div style={{textAlign:"center",marginBottom:14,background:T.bg3,borderRadius:14,padding:"14px",border:`1px solid ${selC}44`}}>
+                <div style={{fontSize:9,color:T.dim,letterSpacing:"0.15em",textTransform:"uppercase",marginBottom:6}}>Rendement WPFF</div>
+                <div style={{fontSize:48,fontWeight:800,fontFamily:"DM Mono",color:rec?T.aura:selC,animation:rec?"rglow 2s infinite":"none"}}>{r?`${r}%`:"—"}</div>
+                <div style={{fontSize:10,color:T.dim,marginTop:4}}>Ice Water Hash · FreezeDryer</div>
+              </div>
+              {Object.keys(byMicron).length>0&&(
+                <div style={{display:"flex",gap:8,marginBottom:14}}>
+                  {Object.entries(byMicron).filter(([m])=>m!=="160µ").map(([mic,po])=>(
+                    <div key={mic} style={{flex:1,background:T.bg3,borderRadius:10,padding:"10px",textAlign:"center",border:`1px solid ${selC}22`}}>
+                      <div style={{fontSize:9,color:T.dim,marginBottom:3}}>{mic}</div>
+                      <div style={{fontSize:16,fontWeight:800,color:T.gold,fontFamily:"DM Mono"}}>{po.toFixed(1)}g</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          {prodTab==="rosin"&&(
+            <div style={{marginBottom:16}}>
+              <div style={{textAlign:"center",marginBottom:14,background:T.bg3,borderRadius:14,padding:"24px",border:`1px solid ${T.gold}33`}}>
+                <div style={{fontSize:9,color:T.dim,letterSpacing:"0.15em",textTransform:"uppercase",marginBottom:8}}>Rendement Live Rosin</div>
+                <div style={{fontSize:22,fontWeight:700,color:T.gold,marginBottom:6}}>À venir</div>
+                <div style={{fontSize:11,color:T.dim}}>Fabriqué à partir du WPFF (90µ / 45µ)</div>
+                <div style={{fontSize:11,color:T.dim,marginTop:4}}>ou du 160µ blend multi-strains</div>
+              </div>
+              <div style={{background:T.bg3,borderRadius:12,padding:"14px",border:`1px solid ${T.border}`}}>
+                <div style={{fontSize:10,color:T.dim,marginBottom:6}}>160µ WPFF disponible</div>
+                {byMicron["160µ"]
+                  ?<div style={{fontSize:22,fontWeight:800,color:T.orange,fontFamily:"DM Mono"}}>{byMicron["160µ"].toFixed(1)}g</div>
+                  :<div style={{fontSize:13,color:T.dim,fontStyle:"italic"}}>Aucune pesée 160µ enregistrée</div>
+                }
+              </div>
+            </div>
+          )}
+          {editing===sel?(
+            <Crd s={{border:`1px solid ${selC}44`}}>
+              <STL icon="✏" text="MODIFIER" col={selC}/>
+              <Fld label="Génétique"><input value={ed.genetique||""} onChange={e=>sED(x=>({...x,genetique:e.target.value}))} placeholder="Ex: GMO x Triangle Kush"/></Fld>
+              <Fld label="Odeur"><input value={ed.odeur||""} onChange={e=>sED(x=>({...x,odeur:e.target.value}))} placeholder="Ex: Terreuse, fruitée..."/></Fld>
+              <Fld label="Goût"><input value={ed.gout||""} onChange={e=>sED(x=>({...x,gout:e.target.value}))} placeholder="Ex: Diesel, floral..."/></Fld>
+              <div style={{marginBottom:14}}>
+                <Lbl c="Mode de cure"/>
+                <button onClick={()=>sED(x=>({...x,mode_cure:"FreezeDryer"}))} style={{padding:"10px 18px",borderRadius:10,fontWeight:700,fontSize:13,background:ed.mode_cure==="FreezeDryer"?selC+"44":T.bg3,color:ed.mode_cure==="FreezeDryer"?T.white:T.dim,border:`2px solid ${ed.mode_cure==="FreezeDryer"?selC:T.border}`}}>FreezeDryer</button>
+              </div>
+              <div style={{marginBottom:14}}>
+                <Lbl c="Type produit"/>
+                <div style={{display:"flex",gap:8}}>
+                  {TYPES_PRODUIT.map(t=><button key={t} onClick={()=>sED(x=>({...x,type_produit:t}))} style={{flex:1,padding:"10px",borderRadius:10,fontWeight:700,fontSize:13,background:ed.type_produit===t?selC+"44":T.bg3,color:ed.type_produit===t?T.white:T.dim,border:`2px solid ${ed.type_produit===t?selC:T.border}`}}>{t}</button>)}
+                </div>
+              </div>
+              <Fld label="Notes"><textarea value={ed.notes||""} onChange={e=>sED(x=>({...x,notes:e.target.value}))} rows={3} style={{resize:"none"}}/></Fld>
+              <div style={{display:"flex",gap:10}}>
+                <BOL c="Annuler" onClick={()=>sEd(null)} col={T.dim}/>
+                <Btn c={saving?"Sauvegarde...":"💾 Sauvegarder"} onClick={saveEdit} disabled={saving} col={selC}/>
+              </div>
+            </Crd>
+          ):(
+            <>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
+                {[["Odeur",selSt.odeur||"—"],["Goût",selSt.gout||"—"],["Cure",selSt.mode_cure||"FreezeDryer"],["Sessions",seSel.length]].map(([l,v])=>(
+                  <div key={l} style={{background:T.bg3,borderRadius:12,padding:"12px 14px",borderLeft:`2px solid ${selC}66`}}>
+                    <div style={{fontSize:9,color:T.dim,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:4}}>{l}</div>
+                    <div style={{fontSize:15,fontWeight:700,color:T.white}}>{v}</div>
+                  </div>
+                ))}
+              </div>
+              {selSt.notes&&<div style={{background:T.bg3,borderRadius:12,padding:14,marginBottom:14}}><div style={{fontSize:9,color:T.dim,marginBottom:4}}>NOTES</div><div style={{fontSize:13,color:T.ink,fontStyle:"italic"}}>{selSt.notes}</div></div>}
+              <div style={{display:"flex",gap:10}}>
+                <button onClick={()=>{sEd(sel);sED({odeur:selSt.odeur||"",gout:selSt.gout||"",mode_cure:selSt.mode_cure||"",notes:selSt.notes||"",genetique:selSt.genetique||"",type_produit:selSt.type_produit||""});}} style={{flex:1,padding:"13px",borderRadius:12,background:selC+"22",border:`1.5px solid ${selC}`,color:selC,fontWeight:700,fontSize:14}}>✏ Modifier</button>
+                <button onClick={()=>sSel(null)} style={{flex:1,padding:"13px",borderRadius:12,background:"transparent",border:`1.5px solid ${T.border}`,color:T.dim,fontWeight:700,fontSize:14}}>✕ Fermer</button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const Catalogue=()=>{
   const[strains,sSt]=useState([]);
   const[sessions,sSe]=useState([]);
@@ -1173,118 +1280,7 @@ const Catalogue=()=>{
         })}
       </div>
 
-      {sel&&selSt&&(()=>{
-        const[prodTab,setProdTab]=useState("wpff");
-        const r=getR(sel);
-        const rec=r&&parseFloat(r)>4;
-        const seSel=sessions.filter(s=>s.strain===sel);
-        const peSel=pesees.filter(p=>seSel.find(s=>s.id===p.session_id));
-        const byMicron={};peSel.forEach(p=>{if(!byMicron[p.micron])byMicron[p.micron]=0;byMicron[p.micron]+=parseFloat(p.poids_sec_g)||0;});
-        return(
-        <div style={{position:"fixed",inset:0,zIndex:500,background:"#000000AA",display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={()=>{sSel(null);sEd(null);}}>
-          <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:768,background:`linear-gradient(160deg,${T.bg2},${selC}18)`,border:`2px solid ${selC}88`,borderRadius:"24px 24px 0 0",maxHeight:"90vh",overflowY:"auto",animation:"dup 0.3s ease",paddingBottom:"max(24px,env(safe-area-inset-bottom))"}}>
-            <div style={{height:200,background:selSt.photo_url?`url(${selSt.photo_url}) center/cover`:`linear-gradient(135deg,${selC}44,${T.bg3})`,display:"flex",alignItems:"flex-end",justifyContent:"space-between",padding:20,position:"relative"}}>
-              <div style={{width:40,height:4,background:T.white+"44",borderRadius:2,position:"absolute",top:12,left:"50%",transform:"translateX(-50%)"}}/>
-              {!selSt.photo_url&&<div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:70,opacity:0.15}}>🌿</div>}
-              <div>
-                <div style={{fontSize:30,fontWeight:900,fontStyle:"italic",color:T.white,textShadow:`2px 2px 0 ${selC},0 0 20px ${selC}88`}}>{sel}</div>
-                {selSt.genetique&&<div style={{fontSize:13,color:T.ink}}>{selSt.genetique}</div>}
-              </div>
-              <input ref={fRef} type="file" accept="image/*" onChange={e=>upload(e,sel)} style={{display:"none"}}/>
-              <button onClick={()=>fRef.current.click()} style={{background:`${T.bg2}CC`,border:`1px solid ${selC}`,borderRadius:10,padding:"8px 14px",color:selC,fontWeight:700,fontSize:12}}>📷 Photo</button>
-            </div>
-            <div style={{padding:20}}>
-              {/* Product tabs */}
-              <div style={{display:"flex",gap:8,marginBottom:16}}>
-                {[["wpff","🧊 WPFF"],["rosin","🔥 Live Rosin"]].map(([id,lbl])=>(
-                  <button key={id} onClick={()=>setProdTab(id)} style={{flex:1,padding:"10px",borderRadius:12,fontWeight:800,fontSize:13,background:prodTab===id?selC+"33":T.bg3,color:prodTab===id?selC:T.dim,border:`2px solid ${prodTab===id?selC:T.border}`}}>{lbl}</button>
-                ))}
-              </div>
-
-              {/* WPFF tab */}
-              {prodTab==="wpff"&&(
-                <div style={{marginBottom:16}}>
-                  <div style={{textAlign:"center",marginBottom:14,background:T.bg3,borderRadius:14,padding:"14px",border:`1px solid ${selC}44`}}>
-                    <div style={{fontSize:9,color:T.dim,letterSpacing:"0.15em",textTransform:"uppercase",marginBottom:6}}>Rendement WPFF</div>
-                    <div style={{fontSize:48,fontWeight:800,fontFamily:"DM Mono",color:rec?T.aura:selC,animation:rec?"rglow 2s infinite":"none"}}>{r?`${r}%`:"—"}</div>
-                    <div style={{fontSize:10,color:T.dim,marginTop:4}}>Ice Water Hash · FreezeDryer</div>
-                  </div>
-                  {Object.keys(byMicron).length>0&&(
-                    <div style={{display:"flex",gap:8,marginBottom:14}}>
-                      {Object.entries(byMicron).map(([mic,po])=>(
-                        <div key={mic} style={{flex:1,background:T.bg3,borderRadius:10,padding:"10px",textAlign:"center",border:`1px solid ${selC}22`}}>
-                          <div style={{fontSize:9,color:T.dim,marginBottom:3}}>{mic}</div>
-                          <div style={{fontSize:16,fontWeight:800,color:T.gold,fontFamily:"DM Mono"}}>{po.toFixed(1)}g</div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Live Rosin tab */}
-              {prodTab==="rosin"&&(
-                <div style={{marginBottom:16}}>
-                  <div style={{textAlign:"center",marginBottom:14,background:T.bg3,borderRadius:14,padding:"24px",border:`1px solid ${T.gold}33`}}>
-                    <div style={{fontSize:9,color:T.dim,letterSpacing:"0.15em",textTransform:"uppercase",marginBottom:8}}>Rendement Live Rosin</div>
-                    <div style={{fontSize:22,fontWeight:700,color:T.gold,marginBottom:6}}>À venir</div>
-                    <div style={{fontSize:11,color:T.dim}}>Fabriqué à partir du WPFF (90µ / 45µ)</div>
-                    <div style={{fontSize:11,color:T.dim,marginTop:4}}>ou du 160µ blend multi-strains</div>
-                  </div>
-                  <div style={{background:T.bg3,borderRadius:12,padding:"14px",border:`1px solid ${T.border}`}}>
-                    <div style={{fontSize:10,color:T.dim,marginBottom:6}}>160µ WPFF disponible</div>
-                    {byMicron["160µ"]
-                      ? <div style={{fontSize:22,fontWeight:800,color:T.orange,fontFamily:"DM Mono"}}>{byMicron["160µ"].toFixed(1)}g</div>
-                      : <div style={{fontSize:13,color:T.dim,fontStyle:"italic"}}>Aucune pesée 160µ enregistrée</div>
-                    }
-                  </div>
-                </div>
-              )}
-
-              {editing===sel?(
-                <Crd s={{border:`1px solid ${selC}44`}}>
-                  <STL icon="✏" text="MODIFIER" col={selC}/>
-                  <Fld label="Génétique"><input value={ed.genetique||""} onChange={e=>sED(x=>({...x,genetique:e.target.value}))} placeholder="Ex: GMO x Triangle Kush"/></Fld>
-                  <Fld label="Odeur"><input value={ed.odeur||""} onChange={e=>sED(x=>({...x,odeur:e.target.value}))} placeholder="Ex: Terreuse, fruitée..."/></Fld>
-                  <Fld label="Goût"><input value={ed.gout||""} onChange={e=>sED(x=>({...x,gout:e.target.value}))} placeholder="Ex: Diesel, floral..."/></Fld>
-                  <div style={{marginBottom:14}}>
-                    <Lbl c="Mode de cure"/>
-                    <button onClick={()=>sED(x=>({...x,mode_cure:"FreezeDryer"}))} style={{padding:"10px 18px",borderRadius:10,fontWeight:700,fontSize:13,background:ed.mode_cure==="FreezeDryer"?selC+"44":T.bg3,color:ed.mode_cure==="FreezeDryer"?T.white:T.dim,border:`2px solid ${ed.mode_cure==="FreezeDryer"?selC:T.border}`}}>FreezeDryer</button>
-                  </div>
-                  <div style={{marginBottom:14}}>
-                    <Lbl c="Type produit"/>
-                    <div style={{display:"flex",gap:8}}>
-                      {TYPES_PRODUIT.map(t=><button key={t} onClick={()=>sED(x=>({...x,type_produit:t}))} style={{flex:1,padding:"10px",borderRadius:10,fontWeight:700,fontSize:13,background:ed.type_produit===t?selC+"44":T.bg3,color:ed.type_produit===t?T.white:T.dim,border:`2px solid ${ed.type_produit===t?selC:T.border}`}}>{t}</button>)}
-                    </div>
-                  </div>
-                  <Fld label="Notes"><textarea value={ed.notes||""} onChange={e=>sED(x=>({...x,notes:e.target.value}))} rows={3} style={{resize:"none"}}/></Fld>
-                  <div style={{display:"flex",gap:10}}>
-                    <BOL c="Annuler" onClick={()=>sEd(null)} col={T.dim}/>
-                    <Btn c={saving?"Sauvegarde...":"💾 Sauvegarder"} onClick={saveEdit} disabled={saving} col={selC}/>
-                  </div>
-                </Crd>
-              ):(
-                <>
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
-                    {[["Odeur",selSt.odeur||"—"],["Goût",selSt.gout||"—"],["Cure",selSt.mode_cure||"FreezeDryer"],["Sessions",seSel.length]].map(([l,v])=>(
-                      <div key={l} style={{background:T.bg3,borderRadius:12,padding:"12px 14px",borderLeft:`2px solid ${selC}66`}}>
-                        <div style={{fontSize:9,color:T.dim,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:4}}>{l}</div>
-                        <div style={{fontSize:15,fontWeight:700,color:T.white}}>{v}</div>
-                      </div>
-                    ))}
-                  </div>
-                  {selSt.notes&&<div style={{background:T.bg3,borderRadius:12,padding:14,marginBottom:14}}><div style={{fontSize:9,color:T.dim,marginBottom:4}}>NOTES</div><div style={{fontSize:13,color:T.ink,fontStyle:"italic"}}>{selSt.notes}</div></div>}
-                  <div style={{display:"flex",gap:10}}>
-                    <button onClick={()=>edit(selSt)} style={{flex:1,padding:"13px",borderRadius:12,background:selC+"22",border:`1.5px solid ${selC}`,color:selC,fontWeight:700,fontSize:14}}>✏ Modifier</button>
-                    <button onClick={()=>sSel(null)} style={{flex:1,padding:"13px",borderRadius:12,background:"transparent",border:`1.5px solid ${T.border}`,color:T.dim,fontWeight:700,fontSize:14}}>✕ Fermer</button>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-        );
-      })()}
+      {sel&&selSt&&<CatalogueModal sel={sel} selSt={selSt} selC={selC} sessions={sessions} pesees={pesees} getR={getR} fRef={fRef} upload={upload} editing={editing} sEd={sEd} ed={ed} sED={sED} saving={saving} saveEdit={saveEdit} sSel={sSel} TYPES_PRODUIT={TYPES_PRODUIT}/>}
     </div>
   );
 };
