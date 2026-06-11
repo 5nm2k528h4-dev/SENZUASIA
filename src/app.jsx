@@ -592,10 +592,10 @@ const StrainSelector=({value,onChange,strainNames,onDelete})=>{
   };
   if(showNew)return(
     <div style={{display:"flex",flexDirection:"column",gap:6}}>
-      <input value={newName} onChange={e=>setNewName(e.target.value)} placeholder="Nom de la strain..." autoFocus style={{fontSize:14,padding:"8px 12px"}}/>
+      <input value={newName} onChange={e=>setNewName(e.target.value)} placeholder="Nom de la strain..." style={{fontSize:14,padding:"8px 12px"}}/>
       <div style={{display:"flex",gap:6}}>
-        <button onClick={()=>setShowNew(false)} style={{flex:1,padding:"8px",borderRadius:8,background:"transparent",border:`1px solid ${T.border}`,color:T.dim,fontSize:12}}>Annuler</button>
-        <button onClick={saveNew} disabled={saving} style={{flex:1,padding:"8px",borderRadius:8,background:T.orange,color:"#fff",fontSize:12,fontWeight:700}}>{saving?"...":"✓ Créer"}</button>
+        <button onClick={()=>{setShowNew(false);setNewName("");}} style={{flex:1,padding:"8px",borderRadius:8,background:"transparent",border:`1px solid ${T.border}`,color:T.dim,fontSize:12}}>Annuler</button>
+        <button onClick={saveNew} disabled={saving||!newName.trim()} style={{flex:1,padding:"8px",borderRadius:8,background:T.cyan,color:"#000",fontSize:12,fontWeight:700,opacity:saving||!newName.trim()?0.5:1}}>{saving?"...":"✓ Créer"}</button>
       </div>
     </div>
   );
