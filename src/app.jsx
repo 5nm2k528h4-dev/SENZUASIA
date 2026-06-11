@@ -136,25 +136,39 @@ const TimerPanel=({machine,onClose})=>{
     <div>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
-          <div style={{width:9,height:9,borderRadius:"50%",background:c,boxShadow:`0 0 8px ${c}`}}/>
-          <span style={{fontSize:12,fontWeight:800,color:c,letterSpacing:"0.1em"}}>CHRONO {MS[machine]}</span>
+          <div style={{width:8,height:8,borderRadius:"50%",background:c,boxShadow:`0 0 8px ${c}`}}/>
+          <span style={{fontSize:11,fontWeight:700,color:c,letterSpacing:"0.1em",fontFamily:"'Oswald',sans-serif"}}>CHRONO {MS[machine]}</span>
         </div>
-        <button onClick={onClose} style={{background:"transparent",color:T.dim,fontSize:18}}>✕</button>
+        <button onClick={onClose} style={{background:"transparent",color:T.dim,fontSize:18,border:"none"}}>✕</button>
       </div>
-      {!running&&remaining===null&&<Wheel value={duree} onChange={setD} color={c}/>}
-      {(running||remaining!=null||done)&&(
-        <div style={{textAlign:"center",margin:"10px 0 14px"}}>
-          <div style={{fontSize:54,fontWeight:800,fontFamily:"DM Mono",color:done?c:running?T.white:T.dim,animation:done?"tpulse 0.8s infinite":"none",textShadow:running?`0 0 20px ${c}44`:"none"}}>
-            {String(m).padStart(2,"0")}:{String(s).padStart(2,"0")}
+
+      {/* Sélecteur durée — uniquement si pas encore démarré */}
+      {!running&&remaining===null&&!done&&(
+        <div style={{marginBottom:14}}>
+          <div style={{fontSize:9,color:T.dim,textAlign:"center",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>Durée</div>
+          <div style={{display:"flex",alignItems:"center",gap:10,justifyContent:"center"}}>
+            <button onClick={()=>setD(Math.max(1,duree-1))} style={{width:40,height:40,borderRadius:10,background:T.bg3,border:`1px solid ${T.border}`,color:T.white,fontSize:20,fontWeight:700}}>−</button>
+            <div style={{fontSize:36,fontWeight:700,fontFamily:"'Rajdhani',sans-serif",color:c,minWidth:80,textAlign:"center"}}>{String(duree).padStart(2,"0")} min</div>
+            <button onClick={()=>setD(Math.min(60,duree+1))} style={{width:40,height:40,borderRadius:10,background:c,color:"#fff",fontSize:20,fontWeight:700}}>+</button>
           </div>
-          {done&&<div style={{color:c,fontWeight:800,fontSize:13,marginTop:6}}>⚡ WASH TERMINÉ</div>}
-          {running&&!done&&<div style={{marginTop:10,height:5,background:T.border,borderRadius:3}}><div style={{height:"100%",width:`${p}%`,background:`linear-gradient(90deg,${c},${c}88)`,borderRadius:3,transition:"width 1s linear"}}/></div>}
         </div>
       )}
+
+      {/* Affichage timer en cours */}
+      {(running||remaining!=null||done)&&(
+        <div style={{textAlign:"center",margin:"10px 0 14px"}}>
+          <div style={{fontSize:52,fontWeight:700,fontFamily:"'Rajdhani',sans-serif",color:done?c:running?T.white:T.dim,animation:done?"tpulse 0.8s infinite":"none",textShadow:running?`0 0 20px ${c}44`:"none"}}>
+            {String(m).padStart(2,"0")}:{String(s).padStart(2,"0")}
+          </div>
+          {done&&<div style={{color:c,fontWeight:700,fontSize:13,marginTop:6}}>⚡ WASH TERMINÉ</div>}
+          {running&&!done&&<div style={{marginTop:10,height:4,background:T.border,borderRadius:2}}><div style={{height:"100%",width:`${p}%`,background:`linear-gradient(90deg,${c},${c}88)`,borderRadius:2,transition:"width 1s linear"}}/></div>}
+        </div>
+      )}
+
       <div style={{display:"flex",gap:8}}>
-        {!running&&!done&&<button onClick={()=>start()} style={{flex:1,padding:"12px",borderRadius:10,fontWeight:800,fontSize:14,background:`linear-gradient(135deg,${c},${c}AA)`,color:"#fff",boxShadow:`0 4px 14px ${c}44`}}>▶ Démarrer</button>}
-        {running&&<button onClick={stop} style={{flex:1,padding:"12px",borderRadius:10,fontWeight:800,fontSize:14,background:"transparent",color:T.danger,border:`1.5px solid ${T.danger}`}}>⏹ Stop</button>}
-        {(done||remaining!=null)&&<button onClick={reset} style={{flex:1,padding:"12px",borderRadius:10,fontWeight:700,fontSize:14,background:"transparent",color:T.dim,border:`1.5px solid ${T.border}`}}>↺ Reset</button>}
+        {!running&&!done&&<button onClick={()=>start()} style={{flex:1,padding:"11px",borderRadius:10,fontWeight:700,fontSize:13,background:`linear-gradient(135deg,${c}33,${c}11)`,border:`1px solid ${c}66`,color:c}}>▶ Démarrer</button>}
+        {running&&<button onClick={stop} style={{flex:1,padding:"11px",borderRadius:10,fontWeight:700,fontSize:13,background:"transparent",color:T.danger,border:`1px solid ${T.danger}44`}}>⏹ Stop</button>}
+        {(done||remaining!=null)&&<button onClick={reset} style={{flex:1,padding:"11px",borderRadius:10,fontWeight:600,fontSize:13,background:"transparent",color:T.dim,border:`1px solid ${T.border}`}}>↺ Reset</button>}
       </div>
     </div>
   );
