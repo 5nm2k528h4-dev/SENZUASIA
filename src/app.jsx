@@ -671,7 +671,7 @@ const MachineCard=({machine,strains})=>{
   const short=MS[machine];
   const[data,setData]=useState(()=>{try{const d=localStorage.getItem(lsk);return d?JSON.parse(d):eMach(machine);}catch{return eMach(machine);}});
   const[locked,setLocked]=useState(true);
-  const[face,setFace]=useState(null); // null=closed, "wash", "data"
+  const[open,setOpen]=useState(false);
   const[saving,setSaving]=useState(false);
   const timer=useTimer(machine);
 
@@ -680,8 +680,10 @@ const MachineCard=({machine,strains})=>{
   const sW=(i,k,v)=>setData(d=>{const w=[...d.washes];w[i]={...w[i],[k]:v};return{...d,washes:w};});
   const curW=data.currentWash||1;
   const curWData=data.washes[curW-1]||eW(curW);
-  const prevWData=curW>1?data.washes[curW-2]:null;
   const strainNames=strains.length>0?[...new Set(strains.map(s=>s.nom||s))]:[];
+  const timerMins=timer.remaining!=null?Math.floor(timer.remaining/60):timer.duree;
+  const timerSecs=timer.remaining!=null?timer.remaining%60:0;
+  const timerOn=timer.running;
 
   const saveSession=async()=>{
     if(!data.strain){alert("Strain requis.");return;}
@@ -689,159 +691,147 @@ const MachineCard=({machine,strains})=>{
     try{
       const[row]=await sbFetch("sessions",{method:"POST",body:JSON.stringify({machine,strain:data.strain,biomasse_kg:parseFloat(data.biomasse_kg)||null,type_biomasse:data.type_biomasse,nb_sacs:parseInt(data.nb_sacs)||null,heure_debut:data.heure_debut||null,heure_fin:data.heure_fin||null,statut:"cloture",date:new Date().toISOString().slice(0,10),notes:data.notes||null})});
       const validW=data.washes.filter(w=>w.micron);
-      if(validW.length>0)await sbFetch("washes",{method:"POST",prefer:"return=minimal",body:JSON.stringify(validW.map(w=>({session_id:row.id,numero:w.numero,micron:w.micron,glace:w.glace||null,vitesse:w.vitesse||null,duree_min:w.duree_min||null,couleur_160:w.couleur_160||null,couleur_90:w.couleur_90||null,couleur_45:w.couleur_45||null,texture:w.texture||null,contaminants:w.contaminants,notes:w.notes||null})))});
-      localStorage.removeItem(lsk);setData(eMach(machine));setFace(null);
+      if(validW.length>0)await sbFetch("washes",{method:"POST",prefer:"return=minimal",body:JSON.stringify(validW.map(w=>({session_id:row.id,numero:w.numero,micron:w.micron,glace:w.glace||null,vitesse:w.vitesse||null,duree_min:w.duree_min||null,couleur_wash:w.couleur_wash||null,texture:w.texture||null,contaminants:w.contaminants,notes:w.notes||null})))});
+      localStorage.removeItem(lsk);setData(eMach(machine));setOpen(false);
       alert(`✅ Session ${short} sauvegardée !`);
     }catch(e){alert("Erreur: "+e.message);}
     finally{setSaving(false);}
   };
 
-  const timerMins=timer.remaining!=null?Math.floor(timer.remaining/60):timer.duree;
-  const timerSecs=timer.remaining!=null?timer.remaining%60:0;
-  const timerOn=timer.running;
-
   return(
     <>
-      {/* ── FACE 1 : Machine card ── */}
-      <div style={{background:`linear-gradient(135deg,${T.card},${color}12)`,border:`2px solid ${color}44`,borderRadius:20,padding:18,marginBottom:14,position:"relative"}}>
-        {/* Header */}
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
-          <div style={{display:"flex",alignItems:"center",gap:10}}>
-            <div style={{width:10,height:10,borderRadius:"50%",background:timerOn?T.green:T.danger,boxShadow:`0 0 8px ${timerOn?T.green:T.danger}`,animation:timerOn?"tpulse 1s infinite":"none"}}/>
-            <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,color:color,letterSpacing:2}}>{short}</span>
-            {/* LED toggle */}
-            <div style={{display:"flex",background:T.bg3,borderRadius:20,border:`1px solid ${T.border}`,overflow:"hidden"}}>
-              {!timerOn&&<div style={{padding:"4px 10px",fontSize:10,fontWeight:800,color:T.danger,background:T.danger+"22"}}>OFF</div>}
-              {timerOn
-                ? <div style={{padding:"4px 12px",fontSize:11,fontWeight:800,fontFamily:"DM Mono",color:T.green,background:T.green+"22",animation:"tpulse 1s infinite"}}>{String(timerMins).padStart(2,"0")}:{String(timerSecs).padStart(2,"0")}</div>
-                : <div style={{padding:"4px 10px",fontSize:10,fontWeight:800,color:T.dim}}>ON</div>
+      {/* ── CARD PRINCIPALE — 2 colonnes ── */}
+      <div style={{background:`rgba(20,20,30,0.7)`,backdropFilter:"blur(12px)",border:`1px solid ${color}33`,borderTop:`1px solid ${color}66`,borderRadius:16,marginBottom:12,overflow:"hidden",boxShadow:"0 8px 32px rgba(0,0,0,0.4)"}}>
+        {/* Header machine */}
+        <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 14px",borderBottom:`1px solid rgba(255,255,255,0.06)`}}>
+          <div style={{width:8,height:8,borderRadius:"50%",background:timerOn?T.green:T.danger,boxShadow:`0 0 8px ${timerOn?T.green:T.danger}`,animation:timerOn?"tpulse 1s infinite":"none"}}/>
+          <span style={{fontFamily:"'Oswald',sans-serif",fontSize:20,fontWeight:700,color:color,letterSpacing:2}}>{short}</span>
+          <div style={{display:"flex",background:T.bg3,borderRadius:12,border:`1px solid ${T.border}`,overflow:"hidden",marginLeft:4}}>
+            <div style={{padding:"3px 8px",fontSize:9,fontWeight:700,color:timerOn?T.dim:T.danger,background:timerOn?"transparent":T.danger+"22"}}>OFF</div>
+            <div style={{padding:"3px 8px",fontSize:9,fontWeight:700,color:timerOn?T.green:T.dim,background:timerOn?T.green+"22":"transparent"}}>{timerOn?`${String(timerMins).padStart(2,"0")}:${String(timerSecs).padStart(2,"0")}`:"ON"}</div>
+          </div>
+          <div style={{marginLeft:"auto"}}>
+            <button onClick={()=>setLocked(x=>!x)} style={{background:"transparent",border:"none",fontSize:18,opacity:locked?1:0.5}}>{locked?"🔒":"🔓"}</button>
+          </div>
+        </div>
+
+        {/* Corps — 2 colonnes */}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:0}}>
+          {/* Colonne gauche — données */}
+          <div style={{padding:"12px 14px",borderRight:`1px solid rgba(255,255,255,0.06)`}}>
+            <div style={{marginBottom:10}}>
+              <div style={{fontSize:8,color:T.dim,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:4}}>Strain</div>
+              {locked
+                ? <div style={{fontSize:15,fontWeight:700,color:T.white}}>{data.strain||"—"}</div>
+                : <StrainSelector value={data.strain} onChange={v=>sF("strain",v)} strainNames={strainNames} onDelete={()=>sF("strain","")}/>
               }
             </div>
-          </div>
-          <button onClick={()=>setLocked(x=>!x)} style={{background:"transparent",border:"none",fontSize:20,opacity:locked?1:0.5}}>
-            {locked?"🔒":"🔓"}
-          </button>
-        </div>
-
-        {/* Infos */}
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
-          {[
-            ["Strain", locked
-              ? <div style={{fontSize:16,fontWeight:800,color:T.white}}>{data.strain||"—"}</div>
-              : <StrainSelector value={data.strain} onChange={v=>sF("strain",v)} strainNames={strainNames} onDelete={()=>sF("strain","")}/>
-            ],
-            ["Biomasse", locked
-              ? <div style={{fontSize:16,fontWeight:800,color:color}}>{data.biomasse_kg} kg</div>
-              : <Step label="" value={parseFloat(data.biomasse_kg)||0} onChange={v=>sF("biomasse_kg",v)} step={0.5} max={50} unit=" kg"/>
-            ],
-            ["Wash en cours", locked
-              ? <div style={{fontSize:16,fontWeight:800,color:color}}>W{curW}</div>
-              : <Step label="" value={curW} onChange={v=>sF("currentWash",v)} min={1} max={10}/>
-            ],
-            ["Sacs", locked
-              ? <div style={{fontSize:16,fontWeight:800,color:T.white}}>{data.nb_sacs}</div>
-              : <Step label="" value={parseInt(data.nb_sacs)||0} onChange={v=>sF("nb_sacs",v)} max={30}/>
-            ],
-          ].map(([l,v])=>(
-            <div key={l} style={{background:T.bg3,borderRadius:12,padding:"10px 12px",borderTop:`2px solid ${color}44`}}>
-              <div style={{fontSize:8,color:T.dim,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:4}}>{l}</div>
-              {v}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+              <div>
+                <div style={{fontSize:8,color:T.dim,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:4}}>Biomasse</div>
+                {locked
+                  ? <div style={{fontSize:15,fontWeight:700,color:color}}>{data.biomasse_kg} kg</div>
+                  : <Step label="" value={parseFloat(data.biomasse_kg)||0} onChange={v=>sF("biomasse_kg",v)} step={0.5} max={50} unit=" kg"/>
+                }
+              </div>
+              <div>
+                <div style={{fontSize:8,color:T.dim,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:4}}>Wash</div>
+                {locked
+                  ? <div style={{fontSize:15,fontWeight:700,color:color}}>W{curW}</div>
+                  : <Step label="" value={curW} onChange={v=>sF("currentWash",v)} min={1} max={10}/>
+                }
+              </div>
             </div>
-          ))}
-        </div>
-
-        {!locked&&(
-          <div style={{marginBottom:12}}>
-            <BgSel label="Type produit" value={data.type_biomasse} onChange={v=>sF("type_biomasse",v)} options={TYPES_BIOMASSE}/>
+            {!locked&&(
+              <div style={{marginTop:8}}>
+                <BgSel label="Type produit" value={data.type_biomasse} onChange={v=>sF("type_biomasse",v)} options={TYPES_BIOMASSE}/>
+              </div>
+            )}
           </div>
-        )}
+
+          {/* Colonne droite — chrono */}
+          <div style={{padding:"12px 14px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:8}}>
+            <div style={{fontSize:8,color:T.dim,letterSpacing:"0.15em",textTransform:"uppercase"}}>Chrono</div>
+            <div style={{fontSize:40,fontWeight:700,fontFamily:"'Rajdhani',sans-serif",color:timerOn?T.green:T.dim,animation:timerOn?"tpulse 1s infinite":"none",textShadow:timerOn?`0 0 16px ${T.green}66`:"none",lineHeight:1}}>
+              {String(timerMins).padStart(2,"0")}:{String(timerSecs).padStart(2,"0")}
+            </div>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap",justifyContent:"center"}}>
+              {!timerOn&&<button onClick={()=>timer.start()} style={{padding:"6px 14px",borderRadius:8,background:T.green+"22",border:`1px solid ${T.green}44`,color:T.green,fontWeight:700,fontSize:12}}>▶ Start</button>}
+              {timerOn&&<button onClick={()=>timer.stop()} style={{padding:"6px 14px",borderRadius:8,background:T.danger+"22",border:`1px solid ${T.danger}44`,color:T.danger,fontWeight:700,fontSize:12}}>⏹ Stop</button>}
+              {(timer.remaining!=null||timer.done)&&<button onClick={()=>timer.reset()} style={{padding:"6px 10px",borderRadius:8,background:T.bg3,border:`1px solid ${T.border}`,color:T.dim,fontSize:12}}>↺</button>}
+            </div>
+            {timer.done&&<div style={{fontSize:11,color:T.green,fontWeight:700,animation:"tpulse 0.8s infinite"}}>⚡ TERMINÉ</div>}
+          </div>
+        </div>
 
         {/* Footer */}
-        <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
-          {!locked&&<button onClick={()=>{setData(eMach(machine));localStorage.removeItem(lsk);}} style={{padding:"8px 16px",borderRadius:10,background:"transparent",border:`1px solid ${T.danger}`,color:T.danger,fontSize:12,fontWeight:700}}>↺ Reset</button>}
-          <button onClick={()=>setFace("wash")} style={{padding:"10px 22px",borderRadius:12,background:`linear-gradient(135deg,${color},${color}AA)`,color:"#fff",fontWeight:800,fontSize:14,boxShadow:`0 4px 14px ${color}44`}}>
-            WASH →
-          </button>
+        <div style={{padding:"10px 14px",borderTop:`1px solid rgba(255,255,255,0.06)`,display:"flex",gap:8,justifyContent:"flex-end"}}>
+          {!locked&&<button onClick={()=>{setData(eMach(machine));localStorage.removeItem(lsk);}} style={{padding:"7px 14px",borderRadius:8,background:"transparent",border:`1px solid ${T.danger}44`,color:T.danger,fontSize:12,fontWeight:600}}>↺ Reset</button>}
+          <button onClick={()=>setOpen(true)} style={{padding:"8px 20px",borderRadius:10,background:`linear-gradient(135deg,${color}33,${color}11)`,border:`1px solid ${color}66`,color,fontWeight:700,fontSize:13,letterSpacing:"0.05em"}}>WASH →</button>
         </div>
       </div>
 
-      {/* ── MODAL FACES 2 & 3 ── */}
-      {face&&(
-        <div style={{position:"fixed",inset:0,zIndex:300,background:"#000000BB"}} onClick={()=>setFace(null)}>
-          <div onClick={e=>e.stopPropagation()} style={{position:"absolute",bottom:0,left:0,right:0,background:T.bg2,borderRadius:"20px 20px 0 0",border:`2px solid ${color}66`,maxHeight:"88vh",overflowY:"auto",animation:"dup 0.3s ease",paddingBottom:"max(20px,env(safe-area-inset-bottom))"}}>
-            {/* Modal header */}
-            <div style={{padding:"14px 18px",display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:`1px solid ${T.border}`,position:"sticky",top:0,background:T.bg2,zIndex:10}}>
-              <div style={{display:"flex",gap:8}}>
-                <button onClick={()=>setFace("wash")} style={{padding:"8px 18px",borderRadius:10,fontWeight:800,fontSize:13,background:face==="wash"?color+"22":T.bg3,color:face==="wash"?color:T.dim,border:`1px solid ${face==="wash"?color+"66":T.border}`}}>💧 Wash</button>
-                <button onClick={()=>setFace("data")} style={{padding:"8px 18px",borderRadius:10,fontWeight:800,fontSize:13,background:face==="data"?color+"22":T.bg3,color:face==="data"?color:T.dim,border:`1px solid ${face==="data"?color+"66":T.border}`}}>📈 Data</button>
+      {/* ── MODAL — page unique scrollable ── */}
+      {open&&(
+        <div style={{position:"fixed",inset:0,zIndex:300,background:"#000000BB"}} onClick={()=>setOpen(false)}>
+          <div onClick={e=>e.stopPropagation()} style={{position:"absolute",bottom:0,left:0,right:0,background:T.bg2,borderRadius:"20px 20px 0 0",border:`1px solid ${color}44`,borderTop:`1px solid ${color}88`,maxHeight:"90vh",overflowY:"auto",animation:"dup 0.3s ease",paddingBottom:"max(24px,env(safe-area-inset-bottom))"}}>
+
+            {/* Header sticky */}
+            <div style={{padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:`1px solid rgba(255,255,255,0.06)`,position:"sticky",top:0,background:T.bg2,zIndex:10,backdropFilter:"blur(12px)"}}>
+              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                <div style={{width:8,height:8,borderRadius:"50%",background:color,boxShadow:`0 0 8px ${color}`}}/>
+                <span style={{fontFamily:"'Oswald',sans-serif",fontSize:18,fontWeight:700,color:color,letterSpacing:2}}>{short} — W{curW}</span>
               </div>
-              {/* Chrono indicator */}
-              <div style={{display:"flex",alignItems:"center",gap:6}}>
-                {timerOn
-                  ? <div style={{fontFamily:"DM Mono",fontSize:14,fontWeight:800,color:T.green,animation:"tpulse 1s infinite"}}>{String(timerMins).padStart(2,"0")}:{String(timerSecs).padStart(2,"0")}</div>
-                  : <div style={{display:"flex",background:T.bg3,borderRadius:16,border:`1px solid ${T.border}`,overflow:"hidden"}}>
-                      <div style={{padding:"4px 10px",fontSize:10,fontWeight:800,color:T.danger,background:T.danger+"22"}}>OFF</div>
-                      <button onClick={()=>timer.start()} style={{padding:"4px 10px",fontSize:10,fontWeight:800,color:T.dim,background:"transparent"}}>ON</button>
-                    </div>
-                }
-                {timerOn&&<button onClick={()=>timer.stop()} style={{padding:"4px 10px",borderRadius:8,background:T.danger+"22",border:`1px solid ${T.danger}`,color:T.danger,fontSize:10,fontWeight:800}}>⏹</button>}
+              <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                {/* Nav washes */}
+                <div style={{display:"flex",gap:4}}>
+                  {data.washes.filter(w=>w.micron||w.numero<=curW).slice(0,6).map(w=>(
+                    <button key={w.numero} onClick={()=>sF("currentWash",w.numero)} style={{width:28,height:28,borderRadius:6,background:curW===w.numero?color+"33":T.bg3,border:`1px solid ${curW===w.numero?color:T.border}`,color:curW===w.numero?color:T.dim,fontSize:10,fontWeight:700}}>W{w.numero}</button>
+                  ))}
+                </div>
+                <button onClick={()=>setOpen(false)} style={{width:30,height:30,borderRadius:8,background:T.bg3,border:`1px solid ${T.border}`,color:T.dim,fontSize:14}}>✕</button>
               </div>
             </div>
 
-            {/* Face 2 — Wash */}
-            {face==="wash"&&(
-              <div style={{padding:"16px 18px"}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-                  <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,color:color,letterSpacing:2}}>WASH EN COURS</span>
-                  <div style={{background:color+"22",border:`1px solid ${color}66`,borderRadius:10,padding:"6px 16px",fontFamily:"DM Mono",fontSize:20,fontWeight:800,color:color}}>W{curW}</div>
+            <div style={{padding:"16px 16px"}}>
+              {/* ── SECTION WASH ── */}
+              <div style={{marginBottom:4}}>
+                <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:12}}>
+                  <div style={{width:3,height:16,background:color,borderRadius:2,boxShadow:`0 0 6px ${color}`}}/>
+                  <span style={{fontSize:10,fontWeight:700,color:color,letterSpacing:"0.15em",textTransform:"uppercase",fontFamily:"'Oswald',sans-serif"}}>💧 WASH {curW}</span>
                 </div>
-                {prevWData?.micron&&(
-                  <div style={{background:T.bg3,borderRadius:12,padding:"10px 14px",marginBottom:12,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                    <span style={{fontSize:12,color:T.dim}}>Wash précédent</span>
-                    <div style={{display:"flex",gap:6}}>
-                      <Bdg col={T.dim}>W{curW-1}</Bdg>
-                      {prevWData.micron&&<Bdg col={T.dim}>{prevWData.micron}</Bdg>}
-                      {prevWData.couleur_45&&<Bdg col={T.dim}>{prevWData.couleur_45}</Bdg>}
-                    </div>
-                  </div>
-                )}
-                <div style={{background:T.bg3,borderRadius:12,padding:"12px 14px",marginBottom:16}}>
-                  <MultiMicron value={curWData.micron} onChange={v=>sW(curW-1,"micron",v)}/>
-                  <Fld label="Glace"><BgSel label="" value={curWData.glace||"—"} onChange={v=>sW(curW-1,"glace",v)} options={GLACE}/></Fld>
-                  <Fld label="Vitesse"><BgSel label="" value={curWData.vitesse} onChange={v=>sW(curW-1,"vitesse",v)} options={VITESSES}/></Fld>
-                </div>
-                <div style={{display:"flex",gap:10}}>
-                  <button onClick={()=>{if(curW>1)sF("currentWash",curW-1);}} style={{flex:1,padding:"12px",borderRadius:12,background:T.bg3,border:`1px solid ${T.border}`,color:T.dim,fontWeight:700,fontSize:14}}>← W{curW-1}</button>
-                  <button onClick={()=>{if(curW<10)sF("currentWash",curW+1);}} style={{flex:1,padding:"12px",borderRadius:12,background:color+"22",border:`1px solid ${color}66`,color,fontWeight:700,fontSize:14}}>W{curW+1} →</button>
-                </div>
+                <MultiMicron value={curWData.micron} onChange={v=>sW(curW-1,"micron",v)}/>
+                <Fld label="Glace"><BgSel label="" value={curWData.glace||"—"} onChange={v=>sW(curW-1,"glace",v)} options={GLACE}/></Fld>
+                <Fld label="Vitesse"><BgSel label="" value={curWData.vitesse} onChange={v=>sW(curW-1,"vitesse",v)} options={VITESSES}/></Fld>
               </div>
-            )}
 
-            {/* Face 3 — Data */}
-            {face==="data"&&(
-              <div style={{padding:"16px 18px"}}>
-                <div style={{marginBottom:14,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                  <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,color:color,letterSpacing:2}}>DATA W{curW}</span>
-                  <div style={{display:"flex",gap:6}}>
-                    {data.washes.filter(w=>w.micron).map(w=>(
-                      <button key={w.numero} onClick={()=>sF("currentWash",w.numero)} style={{padding:"4px 10px",borderRadius:8,background:curW===w.numero?color+"33":T.bg3,border:`1px solid ${curW===w.numero?color:T.border}`,color:curW===w.numero?color:T.dim,fontSize:11,fontWeight:700}}>W{w.numero}</button>
-                    ))}
-                  </div>
+              {/* Séparateur */}
+              <div style={{height:1,background:"rgba(255,255,255,0.06)",margin:"16px 0"}}/>
+
+              {/* ── SECTION DATA ── */}
+              <div style={{marginBottom:16}}>
+                <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:12}}>
+                  <div style={{width:3,height:16,background:T.gold,borderRadius:2,boxShadow:`0 0 6px ${T.gold}`}}/>
+                  <span style={{fontSize:10,fontWeight:700,color:T.gold,letterSpacing:"0.15em",textTransform:"uppercase",fontFamily:"'Oswald',sans-serif"}}>📊 DATA WASH {curW}</span>
                 </div>
-                <BgSel label="Couleur 160µ" value={curWData.couleur_160} onChange={v=>sW(curW-1,"couleur_160",v)} options={COULEURS}/>
-                <BgSel label="Couleur 90µ"  value={curWData.couleur_90}  onChange={v=>sW(curW-1,"couleur_90",v)}  options={COULEURS}/>
-                <BgSel label="Couleur 45µ"  value={curWData.couleur_45}  onChange={v=>sW(curW-1,"couleur_45",v)}  options={COULEURS}/>
+                <BgSel label="Couleur du wash" value={curWData.couleur_wash} onChange={v=>sW(curW-1,"couleur_wash",v)} options={COULEURS}/>
                 <BgSel label="Texture" value={curWData.texture} onChange={v=>sW(curW-1,"texture",v)} options={TEXTURES}/>
                 <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
-                  <button onClick={()=>sW(curW-1,"contaminants",!curWData.contaminants)} style={{width:28,height:28,borderRadius:8,border:`2px solid ${curWData.contaminants?T.danger:T.border}`,background:curWData.contaminants?T.danger+"33":"transparent"}}>{curWData.contaminants&&<span style={{color:T.danger}}>✓</span>}</button>
-                  <span style={{fontSize:14,color:curWData.contaminants?T.danger:T.dim}}>Contaminants</span>
+                  <button onClick={()=>sW(curW-1,"contaminants",!curWData.contaminants)} style={{width:26,height:26,borderRadius:7,border:`2px solid ${curWData.contaminants?T.danger:T.border}`,background:curWData.contaminants?T.danger+"33":"transparent",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>{curWData.contaminants&&<span style={{color:T.danger,fontSize:12}}>✓</span>}</button>
+                  <span style={{fontSize:13,color:curWData.contaminants?T.danger:T.dim}}>Contaminants détectés</span>
                 </div>
                 <Fld label="Notes"><textarea value={curWData.notes||""} onChange={e=>sW(curW-1,"notes",e.target.value)} rows={2} style={{resize:"none"}}/></Fld>
-                <div style={{borderTop:`1px solid ${T.border}`,paddingTop:14,marginTop:6}}>
-                  <Btn c={saving?"Sauvegarde...":"💾 Fin de session — Sauvegarder"} onClick={saveSession} disabled={saving} col={T.green}/>
-                </div>
               </div>
-            )}
+
+              {/* ── NAVIGATION + SAVE ── */}
+              <div style={{display:"flex",gap:8,marginBottom:12}}>
+                <button onClick={()=>{if(curW>1)sF("currentWash",curW-1);}} disabled={curW<=1} style={{flex:1,padding:"11px",borderRadius:10,background:T.bg3,border:`1px solid ${T.border}`,color:curW>1?T.white:T.dim,fontWeight:600,fontSize:13,opacity:curW<=1?0.4:1}}>← W{curW-1}</button>
+                <button onClick={()=>{if(curW<10)sF("currentWash",curW+1);}} style={{flex:1,padding:"11px",borderRadius:10,background:color+"22",border:`1px solid ${color}44`,color,fontWeight:600,fontSize:13}}>W{curW+1} →</button>
+              </div>
+              <div style={{borderTop:`1px solid rgba(255,255,255,0.06)`,paddingTop:12}}>
+                <Btn c={saving?"Sauvegarde...":"💾 Fin de session — Sauvegarder"} onClick={saveSession} disabled={saving} col={T.green}/>
+              </div>
+            </div>
           </div>
         </div>
       )}
