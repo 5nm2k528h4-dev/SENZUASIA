@@ -579,7 +579,8 @@ const StrainSelector=({value,onChange,strainNames,onDelete})=>{
   const[showNew,setShowNew]=useState(false);
   const[newName,setNewName]=useState("");
   const[saving,setSaving]=useState(false);
-  const[pressTimer,setPressTimer]=useState(null);
+  const[open,setOpen]=useState(false);
+
   const saveNew=async()=>{
     if(!newName.trim())return;
     setSaving(true);
@@ -590,6 +591,7 @@ const StrainSelector=({value,onChange,strainNames,onDelete})=>{
     }catch(e){alert("Erreur: "+e.message);}
     finally{setSaving(false);}
   };
+
   if(showNew)return(
     <div style={{display:"flex",flexDirection:"column",gap:6}}>
       <input value={newName} onChange={e=>setNewName(e.target.value)} placeholder="Nom de la strain..." style={{fontSize:14,padding:"8px 12px"}}/>
@@ -600,8 +602,6 @@ const StrainSelector=({value,onChange,strainNames,onDelete})=>{
     </div>
   );
 
-  // Custom dropdown with long-press delete
-  const[open,setOpen]=useState(false);
   return(
     <div style={{position:"relative"}}>
       <button onClick={()=>setOpen(x=>!x)} style={{width:"100%",background:T.bg3,border:`1px solid ${value?T.orange+"44":T.border}`,borderRadius:10,padding:"12px 16px",color:value?T.white:T.dim,fontSize:14,textAlign:"left",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -623,7 +623,7 @@ const StrainSelector=({value,onChange,strainNames,onDelete})=>{
                       setOpen(false);
                     }catch(e){alert("Erreur: "+e.message);}
                   }
-                },700);setPressTimer(timer);}}
+                },700);}}
                 onTouchEnd={()=>{clearTimeout(timer);}}>
                 <button onClick={()=>{onChange(s);setOpen(false);}} style={{background:"none",color:value===s?T.orange:T.white,fontSize:14,fontWeight:value===s?700:400,flex:1,textAlign:"left"}}>
                   {value===s&&"✓ "}{s}
@@ -632,7 +632,7 @@ const StrainSelector=({value,onChange,strainNames,onDelete})=>{
               </div>
             );
           })}
-          <div onClick={()=>{setOpen(false);setShowNew(true);}} style={{padding:"12px 16px",color:T.orange,fontSize:13,fontWeight:700,cursor:"pointer"}}>+ Nouvelle strain</div>
+          <div onClick={()=>{setOpen(false);setShowNew(true);}} style={{padding:"12px 16px",color:T.cyan,fontSize:13,fontWeight:700,cursor:"pointer"}}>+ Nouvelle strain</div>
         </div>
       )}
     </div>
