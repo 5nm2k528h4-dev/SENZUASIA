@@ -175,26 +175,38 @@ const TimerPanel=({machine,onClose})=>{
   );
 };
 
+// ── TIMER CONTEXT GLOBAL ──────────────────────────────────────────────────────
+const TimerContext = React.createContext({});
+
+const TimerProvider=({children})=>{
+  const t1=useTimer("Machine 1");
+  const t2=useTimer("Machine 2");
+  const t3=useTimer("Machine 3");
+  const timers={"Machine 1":t1,"Machine 2":t2,"Machine 3":t3};
+  return <TimerContext.Provider value={timers}>{children}</TimerContext.Provider>;
+};
+
 const FloatingTimers=()=>{
+  const timers=React.useContext(TimerContext);
   const[exp,setExp]=useState(null);
   const[,tick]=useState(0);
   useEffect(()=>{const t=setInterval(()=>tick(x=>x+1),1000);return()=>clearInterval(t);},[]);
-  const timers=MACHINES.map(m=>{try{return{machine:m,...JSON.parse(localStorage.getItem(LTK(m))||"{}")};}catch{return{machine:m,...TINIT};}});
-  const active=timers.filter(t=>t.running||t.done||t.remaining!=null);
+  const active=MACHINES.filter(m=>{const t=timers[m];return t&&(t.running||t.done||t.remaining!=null);});
   if(active.length===0&&!exp)return null;
   return(
     <>
       <div style={{position:"fixed",top:60,right:8,zIndex:300,display:"flex",flexDirection:"column",gap:5,alignItems:"flex-end",pointerEvents:"none"}}>
-        {active.map(t=>{
-          const c=MC[t.machine]||T.orange;
+        {active.map(machine=>{
+          const t=timers[machine];
+          const c=MC[machine]||T.orange;
           const m=t.remaining!=null?Math.floor(t.remaining/60):t.duree||0;
           const s=t.remaining!=null?t.remaining%60:0;
           const p=t.remaining!=null&&t.duree?(t.remaining/(t.duree*60))*100:100;
           return(
-            <button key={t.machine} onClick={()=>setExp(exp===t.machine?null:t.machine)} style={{pointerEvents:"all",background:`${T.bg2}F2`,border:`2px solid ${t.done?c:t.running?c:c+"55"}`,borderRadius:12,padding:"5px 10px 5px 8px",display:"flex",alignItems:"center",gap:7,backdropFilter:"blur(20px)",boxShadow:t.running?`0 0 16px ${c}44,0 2px 14px #00000099`:"0 2px 10px #00000088",animation:"pin 0.3s ease"}}>
+            <button key={machine} onClick={()=>setExp(exp===machine?null:machine)} style={{pointerEvents:"all",background:`${T.bg2}F2`,border:`2px solid ${t.done?c:t.running?c:c+"55"}`,borderRadius:12,padding:"5px 10px 5px 8px",display:"flex",alignItems:"center",gap:7,backdropFilter:"blur(20px)",boxShadow:t.running?`0 0 16px ${c}44,0 2px 14px #00000099`:"0 2px 10px #00000088"}}>
               <div style={{width:7,height:7,borderRadius:"50%",background:c,boxShadow:`0 0 6px ${c}`,animation:t.running?"tpulse 1s infinite":"none"}}/>
-              <span style={{fontSize:10,fontWeight:800,color:c,letterSpacing:"0.06em"}}>{MS[t.machine]}</span>
-              <span style={{fontFamily:"DM Mono",fontSize:15,fontWeight:800,color:t.done?c:t.running?T.white:T.dim,animation:t.done?"tpulse 0.8s infinite":"none"}}>
+              <span style={{fontSize:10,fontWeight:700,color:c,letterSpacing:"0.06em",fontFamily:"'Oswald',sans-serif"}}>{MS[machine]}</span>
+              <span style={{fontFamily:"'Rajdhani',sans-serif",fontSize:15,fontWeight:700,color:t.done?c:t.running?T.white:T.dim,animation:t.done?"tpulse 0.8s infinite":"none"}}>
                 {t.done?"FIN":`${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`}
               </span>
               {t.running&&<div style={{width:24,height:3,background:T.border,borderRadius:2,overflow:"hidden"}}><div style={{height:"100%",width:`${p}%`,background:c,borderRadius:2,transition:"width 1s linear"}}/></div>}
@@ -205,11 +217,56 @@ const FloatingTimers=()=>{
       {exp&&(
         <div style={{position:"fixed",inset:0,zIndex:400,background:"#00000088"}} onClick={()=>setExp(null)}>
           <div onClick={e=>e.stopPropagation()} style={{position:"absolute",top:100,right:8,width:260,background:T.bg2,border:`2px solid ${MC[exp]||T.orange}`,borderRadius:18,padding:18,boxShadow:"0 8px 40px #00000099",animation:"min 0.25s ease"}}>
-            <TimerPanel machine={exp} onClose={()=>setExp(null)}/>
+            <TimerPanelCtx machine={exp} onClose={()=>setExp(null)}/>
           </div>
         </div>
       )}
     </>
+  );
+};
+
+const TimerPanelCtx=({machine,onClose})=>{
+  const timers=React.useContext(TimerContext);
+  const t=timers[machine];
+  if(!t)return null;
+  const c=MC[machine]||T.orange;
+  const m=t.remaining!=null?Math.floor(t.remaining/60):t.duree;
+  const s=t.remaining!=null?t.remaining%60:0;
+  const p=t.remaining!=null?(t.remaining/(t.duree*60))*100:100;
+  return(
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <div style={{width:8,height:8,borderRadius:"50%",background:c,boxShadow:`0 0 8px ${c}`}}/>
+          <span style={{fontSize:11,fontWeight:700,color:c,letterSpacing:"0.1em",fontFamily:"'Oswald',sans-serif"}}>CHRONO {MS[machine]}</span>
+        </div>
+        <button onClick={onClose} style={{background:"transparent",color:T.dim,fontSize:18,border:"none"}}>✕</button>
+      </div>
+      {!t.running&&t.remaining===null&&!t.done&&(
+        <div style={{marginBottom:14}}>
+          <div style={{fontSize:9,color:T.dim,textAlign:"center",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>Durée</div>
+          <div style={{display:"flex",alignItems:"center",gap:10,justifyContent:"center"}}>
+            <button onClick={()=>t.setD(Math.max(1,t.duree-1))} style={{width:40,height:40,borderRadius:10,background:T.bg3,border:`1px solid ${T.border}`,color:T.white,fontSize:20,fontWeight:700}}>−</button>
+            <div style={{fontSize:36,fontWeight:700,fontFamily:"'Rajdhani',sans-serif",color:c,minWidth:80,textAlign:"center"}}>{String(t.duree).padStart(2,"0")} min</div>
+            <button onClick={()=>t.setD(Math.min(60,t.duree+1))} style={{width:40,height:40,borderRadius:10,background:c,color:"#fff",fontSize:20,fontWeight:700}}>+</button>
+          </div>
+        </div>
+      )}
+      {(t.running||t.remaining!=null||t.done)&&(
+        <div style={{textAlign:"center",margin:"10px 0 14px"}}>
+          <div style={{fontSize:52,fontWeight:700,fontFamily:"'Rajdhani',sans-serif",color:t.done?c:t.running?T.white:T.dim,animation:t.done?"tpulse 0.8s infinite":"none"}}>
+            {String(m).padStart(2,"0")}:{String(s).padStart(2,"0")}
+          </div>
+          {t.done&&<div style={{color:c,fontWeight:700,fontSize:13,marginTop:6}}>⚡ WASH TERMINÉ</div>}
+          {t.running&&!t.done&&<div style={{marginTop:10,height:4,background:T.border,borderRadius:2}}><div style={{height:"100%",width:`${p}%`,background:`linear-gradient(90deg,${c},${c}88)`,borderRadius:2,transition:"width 1s linear"}}/></div>}
+        </div>
+      )}
+      <div style={{display:"flex",gap:8}}>
+        {!t.running&&!t.done&&<button onClick={()=>t.start()} style={{flex:1,padding:"11px",borderRadius:10,fontWeight:700,fontSize:13,background:`linear-gradient(135deg,${c}33,${c}11)`,border:`1px solid ${c}66`,color:c}}>▶ Démarrer</button>}
+        {t.running&&<button onClick={t.stop} style={{flex:1,padding:"11px",borderRadius:10,fontWeight:700,fontSize:13,background:"transparent",color:T.danger,border:`1px solid ${T.danger}44`}}>⏹ Stop</button>}
+        {(t.done||t.remaining!=null)&&<button onClick={t.reset} style={{flex:1,padding:"11px",borderRadius:10,fontWeight:600,fontSize:13,background:"transparent",color:T.dim,border:`1px solid ${T.border}`}}>↺ Reset</button>}
+      </div>
+    </div>
   );
 };
 
@@ -688,7 +745,7 @@ const MachineCard=({machine,strains})=>{
   const[locked,setLocked]=useState(true);
   const[open,setOpen]=useState(false);
   const[saving,setSaving]=useState(false);
-  const timer=useTimer(machine);
+  const timer=React.useContext(TimerContext)[machine]||useTimer(machine);
 
   useEffect(()=>{try{localStorage.setItem(lsk,JSON.stringify(data));}catch{}},[data]);
   const sF=(k,v)=>setData(d=>({...d,[k]:v}));
@@ -1664,12 +1721,14 @@ export default function App(){
   return(
     <>
       <style>{CSS}</style>
-      <div style={{maxWidth:768,margin:"0 auto",minHeight:"100vh"}}>
-        <AppHeader/>
-        <div style={{paddingBottom:80}}>{screens[screen]}</div>
-        <NavBar active={screen} onNav={sScr}/>
-      </div>
-      <FloatingTimers/>
+      <TimerProvider>
+        <div style={{maxWidth:768,margin:"0 auto",minHeight:"100vh"}}>
+          <AppHeader/>
+          <div style={{paddingBottom:80}}>{screens[screen]}</div>
+          <NavBar active={screen} onNav={sScr}/>
+        </div>
+        <FloatingTimers/>
+      </TimerProvider>
     </>
   );
 }
