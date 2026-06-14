@@ -58,6 +58,7 @@ button{cursor:pointer;font-family:'Inter',sans-serif;border:none;outline:none;tr
 
 // ── TIMER ──────────────────────────────────────────────────────────────────────
 const LTK = (m) => `sz_t_${m.replace(/\s/g,"_")}`;
+const TINIT = { duree:15, remaining:null, running:false, done:false, startedAt:null };
 const useTimer = (machine) => {
   const k = LTK(machine);
   const load = () => { try { const s=localStorage.getItem(k); if(s) return JSON.parse(s); } catch{} return {...TINIT}; };
@@ -585,8 +586,8 @@ const Dashboard=()=>{
 };
 
 // ── SESSION ───────────────────────────────────────────────────────────────────
-const eW=(n)=>({numero:n,micron:"",glace:"—",vitesse:"",duree_min:15,couleur_160:"",couleur_90:"",couleur_45:"",texture:"",contaminants:false,potentiel_wash_plus:false,notes:""});
-const eMach=(machine)=>({machine,strain:"",biomasse_kg:8,type_biomasse:"Fresh Frozen",nb_sacs:16,heure_debut:"",heure_fin:"",notes:"",washes:Array.from({length:10},(_,i)=>eW(i+1)),currentWash:1});
+const eW=(n)=>({numero:n,micron:"",glace:"—",vitesse:"",duree_min:15,couleur_wash:"",texture:"",contaminants:false,notes:""});
+const eMach=(machine)=>({machine,strain:"",biomasse_kg:8,type_biomasse:"Fresh Frozen",nb_sacs:16,heure_debut:"",heure_fin:"",notes:"",washes:Array.from({length:20},(_,i)=>eW(i+1)),currentWash:1});
 const LSK_M=(m)=>`sz_m_${m.replace(/\s/g,"_")}`;
 
 const StrainSelector=({value,onChange,strainNames,onDelete})=>{
@@ -752,7 +753,7 @@ const MachineCard=({machine,strains})=>{
                 <div style={{fontSize:8,color:T.dim,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:4}}>Wash</div>
                 {locked
                   ? <div style={{fontSize:15,fontWeight:700,color:color}}>W{curW}</div>
-                  : <Step label="" value={curW} onChange={v=>sF("currentWash",v)} min={1} max={10}/>
+                  : <Step label="" value={curW} onChange={v=>sF("currentWash",v)} min={1} max={20}/>
                 }
               </div>
             </div>
@@ -796,14 +797,15 @@ const MachineCard=({machine,strains})=>{
                 <div style={{width:8,height:8,borderRadius:"50%",background:color,boxShadow:`0 0 8px ${color}`}}/>
                 <span style={{fontFamily:"'Oswald',sans-serif",fontSize:18,fontWeight:700,color:color,letterSpacing:2}}>{short} — W{curW}</span>
               </div>
-              <div style={{display:"flex",gap:8,alignItems:"center"}}>
+              <div style={{display:"flex",gap:6,alignItems:"center"}}>
                 {/* Nav washes */}
-                <div style={{display:"flex",gap:4}}>
-                  {data.washes.filter(w=>w.micron||w.numero<=curW).slice(0,6).map(w=>(
-                    <button key={w.numero} onClick={()=>sF("currentWash",w.numero)} style={{width:28,height:28,borderRadius:6,background:curW===w.numero?color+"33":T.bg3,border:`1px solid ${curW===w.numero?color:T.border}`,color:curW===w.numero?color:T.dim,fontSize:10,fontWeight:700}}>W{w.numero}</button>
+                <div style={{display:"flex",gap:3,flexWrap:"wrap",maxWidth:220}}>
+                  {Array.from({length:Math.min(data.currentWash+1,20)},(_,i)=>i+1).map(n=>(
+                    <button key={n} onClick={()=>sF("currentWash",n)} style={{width:26,height:26,borderRadius:6,background:curW===n?color+"33":T.bg3,border:`1px solid ${curW===n?color:T.border}`,color:curW===n?color:T.dim,fontSize:10,fontWeight:700}}>W{n}</button>
                   ))}
+                  {data.currentWash<20&&<button onClick={()=>sF("currentWash",data.currentWash+1)} style={{width:26,height:26,borderRadius:6,background:T.bg3,border:`1px solid ${T.cyan}44`,color:T.cyan,fontSize:14,fontWeight:700}}>+</button>}
                 </div>
-                <button onClick={()=>setOpen(false)} style={{width:30,height:30,borderRadius:8,background:T.bg3,border:`1px solid ${T.border}`,color:T.dim,fontSize:14}}>✕</button>
+                <button onClick={()=>setOpen(false)} style={{width:30,height:30,borderRadius:8,background:T.bg3,border:`1px solid ${T.border}`,color:T.dim,fontSize:14,flexShrink:0}}>✕</button>
               </div>
             </div>
 
