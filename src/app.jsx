@@ -74,6 +74,21 @@ const useTimer = (machine) => {
     }
   },[]);
   useEffect(()=>{
+    const onVis=()=>{
+      if(document.visibilityState==="visible"){
+        const s=load();
+        if(s.running&&s.startedAt&&s.remaining!=null){
+          const e=Math.floor((Date.now()-s.startedAt)/1000);
+          const nr=Math.max(0,s.remaining-e);
+          setSt(x=>({...x,remaining:nr,done:nr===0,running:nr>0,startedAt:Date.now()}));
+        }
+      }
+    };
+    document.addEventListener("visibilitychange",onVis);
+    window.addEventListener("focus",onVis);
+    return()=>{document.removeEventListener("visibilitychange",onVis);window.removeEventListener("focus",onVis);};
+  },[]);
+  useEffect(()=>{
     if(st.running&&st.remaining>0){
       iv.current=setInterval(()=>{
         setSt(s=>{
@@ -97,7 +112,12 @@ const useTimer = (machine) => {
     }else{clearInterval(iv.current);}
     return()=>clearInterval(iv.current);
   },[st.running]);
-  const start=(d)=>setSt(s=>({...s,duree:d??s.duree,remaining:(d??s.duree)*60,running:true,done:false,startedAt:Date.now()}));
+  const start=(d)=>{
+    setSt(s=>{
+      const finalDuree=d!=null?d:s.duree;
+      return{...s,duree:finalDuree,remaining:finalDuree*60,running:true,done:false,startedAt:Date.now()};
+    });
+  };
   const stop=()=>setSt(s=>({...s,running:false}));
   const reset=()=>{try{localStorage.removeItem(k);}catch{}setSt({...TINIT});};
   const setD=(d)=>setSt(s=>({...s,duree:d}));
@@ -745,7 +765,8 @@ const MachineCard=({machine,strains})=>{
   const[locked,setLocked]=useState(true);
   const[open,setOpen]=useState(false);
   const[saving,setSaving]=useState(false);
-  const timer=React.useContext(TimerContext)[machine]||useTimer(machine);
+  const timers=React.useContext(TimerContext);
+  const timer=timers[machine]||{duree:15,remaining:null,running:false,done:false,start:()=>{},stop:()=>{},reset:()=>{},setD:()=>{}};
 
   useEffect(()=>{try{localStorage.setItem(lsk,JSON.stringify(data));}catch{}},[data]);
   const sF=(k,v)=>setData(d=>({...d,[k]:v}));
@@ -753,9 +774,9 @@ const MachineCard=({machine,strains})=>{
   const curW=data.currentWash||1;
   const curWData=data.washes[curW-1]||eW(curW);
   const strainNames=strains.length>0?[...new Set(strains.map(s=>s.nom||s))]:[];
-  const timerMins=timer.remaining!=null?Math.floor(timer.remaining/60):timer.duree;
-  const timerSecs=timer.remaining!=null?timer.remaining%60:0;
-  const timerOn=timer.running;
+  const timerMins=timer&&timer.remaining!=null?Math.floor(timer.remaining/60):timer?.duree||15;
+  const timerSecs=timer&&timer.remaining!=null?timer.remaining%60:0;
+  const timerOn=timer?.running||false;
 
   const saveSession=async()=>{
     if(!data.strain){alert("Strain requis.");return;}
@@ -931,14 +952,11 @@ const Calendrier=()=>{
   const[drw,sDrw]=useState(null);
   const[dW,sdW]=useState({});
   const[dP,sdP]=useState({});
-  const[fSt,sFSt]=useState("");
-  const[fW,sFW]=useState("");
-  const[fM,sFM]=useState("");
-  const[res,sRes]=useState(null);
-  const[srch,sSrch]=useState(false);
+  const[hView,sHV]=useState("strain");
+  const[hOpen,sHOpen]=useState(null);
 
   useEffect(()=>{
-    Promise.all([sbFetch("sessions?select=*&order=date.asc"),sbFetch("washes?select=*")])
+    Promise.all([sbFetch("sessions?select=*&order=date.asc"),sbFetch("washes?select=*,sessions(date,machine,strain,biomasse_kg)&order=created_at.desc")])
       .then(([a,b])=>{ss(a||[]);sw(b||[]);}).catch(()=>{}).finally(()=>sl(false));
   },[]);
 
@@ -967,20 +985,40 @@ const Calendrier=()=>{
     sdW(nW);sdP(nP);
   };
 
-  const search=async()=>{
-    sSrch(true);
-    try{
-      let q="washes?select=*,sessions(date,machine,strain,biomasse_kg)";
-      if(fM)q+=`&micron=eq.${encodeURIComponent(fM)}`;
-      if(fW)q+=`&numero=eq.${fW}`;
-      let data=await sbFetch(q+"&order=created_at.desc&limit=50");
-      if(fSt&&data)data=data.filter(w=>w.sessions?.strain===fSt);
-      sRes(data||[]);
-    }catch(e){sRes([]);}
-    finally{sSrch(false);}
-  };
+  // ── HISTORIQUE — groupements ──
+  const histByStrain=useMemo(()=>{
+    const m={};
+    washes.forEach(w=>{
+      const strain=w.sessions?.strain;
+      if(!strain)return;
+      if(!m[strain])m[strain]={count:0,washes:[]};
+      m[strain].count++;m[strain].washes.push(w);
+    });
+    return m;
+  },[washes]);
 
-  const allSt=[...new Set(sessions.map(s=>s.strain).filter(Boolean))];
+  const histByDate=useMemo(()=>{
+    const m={};
+    washes.forEach(w=>{
+      const date=w.sessions?.date;
+      if(!date)return;
+      if(!m[date])m[date]={count:0,washes:[]};
+      m[date].count++;m[date].washes.push(w);
+    });
+    return m;
+  },[washes]);
+
+  const histByMachine=useMemo(()=>{
+    const m={};
+    washes.forEach(w=>{
+      const machine=w.sessions?.machine;
+      if(!machine)return;
+      if(!m[machine])m[machine]={count:0,washes:[]};
+      m[machine].count++;m[machine].washes.push(w);
+    });
+    return m;
+  },[washes]);
+
   const mLbl=cur.toLocaleDateString("fr-FR",{month:"long",year:"numeric"});
 
   if(loading)return<Load/>;
@@ -1018,36 +1056,107 @@ const Calendrier=()=>{
         </div>
       </Crd>
       <Crd s={{marginBottom:16}}>
-        <STL icon="🔍" text="RECHERCHE WASHES"/>
-        <Fld label="Strain"><select value={fSt} onChange={e=>sFSt(e.target.value)}><option value="">Toutes</option>{allSt.map(s=><option key={s}>{s}</option>)}</select></Fld>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-          <Fld label="N° Wash"><select value={fW} onChange={e=>sFW(e.target.value)}><option value="">Tous</option>{Array.from({length:12},(_,i)=><option key={i+1} value={i+1}>W{i+1}</option>)}</select></Fld>
-          <Fld label="Micron"><select value={fM} onChange={e=>sFM(e.target.value)}><option value="">Tous</option>{MICRONS.map(m=><option key={m}>{m}</option>)}</select></Fld>
-        </div>
-        <Btn c={srch?"Recherche...":"⚡ Rechercher"} onClick={search} disabled={srch}/>
-      </Crd>
-      {res!==null&&(
-        <div>
-          <div style={{fontSize:12,color:T.dim,marginBottom:10}}>{res.length} résultat{res.length!==1?"s":""}</div>
-          {res.map(w=>(
-            <div key={w.id} style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:12,padding:"12px 14px",marginBottom:8}}>
-              <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
-                <div><span style={{fontWeight:800}}>{w.sessions?.strain||"—"}</span><span style={{color:T.dim,fontSize:12,marginLeft:8}}>{w.sessions?.date}</span></div>
-                <Bdg col={MC[w.sessions?.machine]||T.dim}>{MS[w.sessions?.machine]||"—"}</Bdg>
-              </div>
-              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                <Bdg col={T.orange}>W{w.numero}</Bdg>
-                {w.micron&&<Bdg>{w.micron}</Bdg>}
-                {w.couleur_160&&<Bdg col={T.dim}>160: {w.couleur_160}</Bdg>}
-                {w.couleur_90&&<Bdg col={T.dim}>90: {w.couleur_90}</Bdg>}
-                {w.couleur_45&&<Bdg col={T.dim}>45: {w.couleur_45}</Bdg>}
-                {w.texture&&<Bdg col={T.ink}>{w.texture}</Bdg>}
-                {w.contaminants&&<Bdg col={T.danger}>⚠</Bdg>}
-              </div>
-            </div>
+        <STL icon="📜" text="HISTORIQUE" col={T.cyan}/>
+        <div style={{display:"flex",gap:6,marginBottom:14}}>
+          {[["strain","🌿 Strain"],["date","📅 Date"],["machine","⚙ Machine"]].map(([id,lbl])=>(
+            <button key={id} onClick={()=>sHV(id)} style={{flex:1,padding:"9px 4px",borderRadius:9,fontSize:12,fontWeight:700,background:hView===id?T.cyan+"22":T.bg3,color:hView===id?T.cyan:T.dim,border:`1px solid ${hView===id?T.cyan+"66":T.border}`}}>{lbl}</button>
           ))}
         </div>
-      )}
+
+        {hView==="strain"&&(
+          <div>
+            {Object.entries(histByStrain).sort((a,b)=>b[1].count-a[1].count).map(([strain,g])=>(
+              <div key={strain} style={{marginBottom:10}}>
+                <button onClick={()=>sHOpen(x=>x===strain?null:strain)} style={{width:"100%",display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 12px",borderRadius:10,background:T.bg3,border:`1px solid ${T.border}`}}>
+                  <span style={{fontSize:13,fontWeight:700,color:T.white}}>{strain}</span>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    <Bdg col={T.cyan}>{g.count}W</Bdg>
+                    <span style={{color:T.dim,fontSize:11}}>{hOpen===strain?"▲":"▼"}</span>
+                  </div>
+                </button>
+                {hOpen===strain&&(
+                  <div style={{padding:"8px 4px"}}>
+                    {g.washes.map(w=>(
+                      <div key={w.id} style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",padding:"6px 8px",borderBottom:`1px solid ${T.border}`}}>
+                        <Bdg col={T.orange}>W{w.numero}</Bdg>
+                        <span style={{fontSize:10,color:T.dim}}>{w.sessions?.date}</span>
+                        <Bdg col={MC[w.sessions?.machine]||T.dim}>{MS[w.sessions?.machine]}</Bdg>
+                        {w.micron&&<Bdg>{w.micron}</Bdg>}
+                        {w.couleur_wash&&<Bdg col={T.dim}>{w.couleur_wash}</Bdg>}
+                        {w.contaminants&&<Bdg col={T.danger}>⚠</Bdg>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+            {Object.keys(histByStrain).length===0&&<div style={{textAlign:"center",color:T.dim,padding:20,fontSize:13}}>Aucune donnée</div>}
+          </div>
+        )}
+
+        {hView==="date"&&(
+          <div>
+            {Object.entries(histByDate).sort((a,b)=>b[0].localeCompare(a[0])).map(([date,g])=>(
+              <div key={date} style={{marginBottom:10}}>
+                <button onClick={()=>sHOpen(x=>x===date?null:date)} style={{width:"100%",display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 12px",borderRadius:10,background:T.bg3,border:`1px solid ${T.border}`}}>
+                  <span style={{fontSize:13,fontWeight:700,color:T.white}}>{new Date(date+"T12:00:00").toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"short"})}</span>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    <Bdg col={T.cyan}>{g.count}W</Bdg>
+                    <span style={{color:T.dim,fontSize:11}}>{hOpen===date?"▲":"▼"}</span>
+                  </div>
+                </button>
+                {hOpen===date&&(
+                  <div style={{padding:"8px 4px"}}>
+                    {g.washes.map(w=>(
+                      <div key={w.id} style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",padding:"6px 8px",borderBottom:`1px solid ${T.border}`}}>
+                        <Bdg col={T.orange}>W{w.numero}</Bdg>
+                        <span style={{fontSize:11,fontWeight:700,color:T.white}}>{w.sessions?.strain}</span>
+                        <Bdg col={MC[w.sessions?.machine]||T.dim}>{MS[w.sessions?.machine]}</Bdg>
+                        {w.micron&&<Bdg>{w.micron}</Bdg>}
+                        {w.couleur_wash&&<Bdg col={T.dim}>{w.couleur_wash}</Bdg>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+            {Object.keys(histByDate).length===0&&<div style={{textAlign:"center",color:T.dim,padding:20,fontSize:13}}>Aucune donnée</div>}
+          </div>
+        )}
+
+        {hView==="machine"&&(
+          <div>
+            {MACHINES.map(m=>{
+              const g=histByMachine[m]||{count:0,washes:[]};
+              const c=MC[m];
+              return(
+                <div key={m} style={{marginBottom:10}}>
+                  <button onClick={()=>sHOpen(x=>x===m?null:m)} style={{width:"100%",display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 12px",borderRadius:10,background:T.bg3,border:`1px solid ${c}44`}}>
+                    <span style={{fontSize:13,fontWeight:700,color:c}}>{MS[m]}</span>
+                    <div style={{display:"flex",alignItems:"center",gap:8}}>
+                      <Bdg col={c}>{g.count}W</Bdg>
+                      <span style={{color:T.dim,fontSize:11}}>{hOpen===m?"▲":"▼"}</span>
+                    </div>
+                  </button>
+                  {hOpen===m&&(
+                    <div style={{padding:"8px 4px"}}>
+                      {g.washes.map(w=>(
+                        <div key={w.id} style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",padding:"6px 8px",borderBottom:`1px solid ${T.border}`}}>
+                          <Bdg col={T.orange}>W{w.numero}</Bdg>
+                          <span style={{fontSize:11,fontWeight:700,color:T.white}}>{w.sessions?.strain}</span>
+                          <span style={{fontSize:10,color:T.dim}}>{w.sessions?.date}</span>
+                          {w.micron&&<Bdg>{w.micron}</Bdg>}
+                          {w.couleur_wash&&<Bdg col={T.dim}>{w.couleur_wash}</Bdg>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </Crd>
       {drw&&(
         <div style={{position:"fixed",inset:0,zIndex:200,background:"#00000099"}} onClick={()=>sDrw(null)}>
           <div onClick={e=>e.stopPropagation()} style={{position:"absolute",bottom:0,left:0,right:0,background:T.bg2,borderRadius:"20px 20px 0 0",border:`1px solid ${T.border}`,padding:20,maxHeight:"75vh",overflowY:"auto",animation:"dup 0.3s ease",paddingBottom:"max(20px,env(safe-area-inset-bottom))"}}>
@@ -1709,13 +1818,13 @@ export default function App(){
 
   useEffect(()=>{ if(auth) sbFetch("strains?select=*&order=nom.asc").then(d=>sSt(d||[])).catch(()=>{}); },[auth]);
 
-  const screens={dashboard:<Dashboard/>,session:<Session strains={strains}/>,calendar:<Calendrier/>,utilisateurs:<Utilisateurs/>};
+  const screens=useMemo(()=>({dashboard:<Dashboard/>,session:<Session strains={strains}/>,calendar:<Calendrier/>,utilisateurs:<Utilisateurs/>}),[strains]);
 
   if(!auth) return(
-    <>
+    <TimerProvider>
       <style>{CSS}</style>
       <PinScreen onUnlock={()=>setAuth(true)}/>
-    </>
+    </TimerProvider>
   );
 
   return(
