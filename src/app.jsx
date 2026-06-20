@@ -1406,17 +1406,19 @@ const CatalogueSection=()=>{
     }catch(e){alert("Upload: "+e.message);}
   };
 
+  const unpesedSessions=useMemo(()=>{
+    return sessions.filter(se=>se.strain&&!pesees.some(p=>p.session_id===se.id))
+      .sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  },[sessions,pesees]);
+
   const addPesee=async()=>{
-    if(!nP.strain)return;sSav(true);
+    if(!nP.sessionId)return;sSav(true);
     try{
-      const se=sessions.filter(s=>s.strain===nP.strain);
-      const last=se[se.length-1];
-      if(!last){alert("Aucune session pour cette strain.");return;}
       const rows=[];
-      if(parseFloat(nP.m90)>0)rows.push({session_id:last.id,micron:"90µ",poids_sec_g:parseFloat(nP.m90)});
-      if(parseFloat(nP.m45)>0)rows.push({session_id:last.id,micron:"45µ",poids_sec_g:parseFloat(nP.m45)});
+      if(parseFloat(nP.m90)>0)rows.push({session_id:nP.sessionId,micron:"90µ",poids_sec_g:parseFloat(nP.m90)});
+      if(parseFloat(nP.m45)>0)rows.push({session_id:nP.sessionId,micron:"45µ",poids_sec_g:parseFloat(nP.m45)});
       if(rows.length>0)await sbFetch("pesees",{method:"POST",prefer:"return=minimal",body:JSON.stringify(rows)});
-      const p=await sbFetch("pesees?select=*");sPe(p||[]);sShP(false);sNP({strain:"",m90:0,m45:0});
+      const p=await sbFetch("pesees?select=*");sPe(p||[]);sShP(false);sNP({sessionId:"",m90:0,m45:0});
     }catch(e){alert("Erreur: "+e.message);}
     finally{sSav(false);}
   };
@@ -1444,11 +1446,12 @@ const CatalogueSection=()=>{
             <div>
               <div style={{fontSize:10,color:T.gold,fontWeight:800,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10,textAlign:"center"}}>⚖ Pesées Freeze Dryer</div>
               <div style={{marginBottom:8}}>
-                <div style={{fontSize:9,color:T.dim,textAlign:"center",marginBottom:4,letterSpacing:"0.08em",textTransform:"uppercase"}}>Strain</div>
-                <select value={nP.strain} onChange={e=>sNP(x=>({...x,strain:e.target.value}))} style={{fontSize:12,padding:"8px 10px"}}>
+                <div style={{fontSize:9,color:T.dim,textAlign:"center",marginBottom:4,letterSpacing:"0.08em",textTransform:"uppercase"}}>Session (strain · machine · date)</div>
+                <select value={nP.sessionId} onChange={e=>sNP(x=>({...x,sessionId:e.target.value}))} style={{fontSize:11,padding:"8px 6px"}}>
                   <option value="">Sélectionner...</option>
-                  {allSt.map(s=><option key={s.nom||s}>{s.nom||s}</option>)}
+                  {unpesedSessions.map(se=><option key={se.id} value={se.id}>{se.strain} · {MS[se.machine]||se.machine} · {se.date}</option>)}
                 </select>
+                {unpesedSessions.length===0&&<div style={{fontSize:10,color:T.dim,textAlign:"center",marginTop:6,fontStyle:"italic"}}>Toutes les sessions sont pesées ✓</div>}
               </div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
                 {[["90µ (g)","m90"],["45µ / FS (g)","m45"]].map(([lbl,key])=>(
