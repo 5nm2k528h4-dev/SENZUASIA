@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, createContext, useContext } from "react";
 
 const SB_URL = "https://kbhfwixwtlptyaavvhit.supabase.co";
 const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtiaGZ3aXh3dGxwdHlhYXZ2aGl0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjY0MjQsImV4cCI6MjA5NjIwMjQyNH0.o2r2bDEVhQwqfkKVg5Jeml--XobIpWp74gjYeaso0dU";
@@ -195,7 +195,7 @@ const TimerPanel=({machine,onClose})=>{
 };
 
 // ── TIMER CONTEXT GLOBAL ──────────────────────────────────────────────────────
-const TimerContext = React.createContext({});
+const TimerContext = createContext({});
 
 const TimerProvider=({children})=>{
   const t1=useTimer("Machine 1");
@@ -206,7 +206,7 @@ const TimerProvider=({children})=>{
 };
 
 const FloatingTimers=()=>{
-  const timers=React.useContext(TimerContext);
+  const timers=useContext(TimerContext);
   const[exp,setExp]=useState(null);
   const[,tick]=useState(0);
   useEffect(()=>{const t=setInterval(()=>tick(x=>x+1),1000);return()=>clearInterval(t);},[]);
@@ -245,7 +245,7 @@ const FloatingTimers=()=>{
 };
 
 const TimerPanelCtx=({machine,onClose})=>{
-  const timers=React.useContext(TimerContext);
+  const timers=useContext(TimerContext);
   const t=timers[machine];
   if(!t)return null;
   const c=MC[machine]||T.orange;
@@ -787,7 +787,7 @@ const MachineCard=({machine,strains})=>{
   const[locked,setLocked]=useState(true);
   const[open,setOpen]=useState(false);
   const[saving,setSaving]=useState(false);
-  const timers=React.useContext(TimerContext);
+  const timers=useContext(TimerContext);
   const timer=timers[machine]||{duree:15,remaining:null,running:false,done:false,start:()=>{},stop:()=>{},reset:()=>{},setD:()=>{}};
 
   useEffect(()=>{try{localStorage.setItem(lsk,JSON.stringify(data));}catch{}},[data]);
