@@ -658,20 +658,21 @@ const Dashboard=()=>{
 
       {/* ── SESSIONS EN COURS (Freeze Dryer) ── */}
       {(()=>{
-        const strainNames=[...new Set(sessions.map(s=>s.strain).filter(Boolean))];
-        const inProgress=strainNames.filter(nom=>{
-          const se=sessions.filter(s=>s.strain===nom);
-          const pe=pesees.filter(p=>se.find(s=>s.id===p.session_id));
+        const inProgress=sessions.filter(se=>{
+          const pe=pesees.filter(p=>p.session_id===se.id);
           return pe.length===0;
-        });
+        }).sort((a,b)=>(b.date||"").localeCompare(a.date||""));
         if(inProgress.length===0)return null;
         return(
           <Crd s={{marginBottom:16,border:`1px solid ${T.gold}33`}}>
             <STL icon="⏳" text="EN COURS — FREEZE DRYER" col={T.gold}/>
-            {inProgress.map(nom=>(
-              <div key={nom} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:`1px solid ${T.border}`}}>
-                <span style={{fontSize:13,color:T.white,fontWeight:600}}>{nom}</span>
-                <span style={{fontSize:10,color:T.gold,fontWeight:700,background:"#2a1f0a",border:`1px solid ${T.gold}44`,borderRadius:5,padding:"2px 8px"}}>⏳ En cours</span>
+            {inProgress.map(se=>(
+              <div key={se.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:`1px solid ${T.border}`}}>
+                <div>
+                  <span style={{fontSize:13,color:T.white,fontWeight:600}}>{se.strain||"—"}</span>
+                  <span style={{fontSize:10,color:T.dim,marginLeft:8}}>{MS[se.machine]} · {se.date}</span>
+                </div>
+                <span style={{fontSize:10,color:T.gold,fontWeight:700,background:"#2a1f0a",border:`1px solid ${T.gold}44`,borderRadius:5,padding:"2px 8px",flexShrink:0}}>⏳ En cours</span>
               </div>
             ))}
           </Crd>
@@ -1377,8 +1378,8 @@ const CatalogueSection=()=>{
   const getStatus=(nom)=>{
     const se=sessions.filter(s=>s.strain===nom);
     if(se.length===0)return null;
-    const pe=pesees.filter(p=>se.find(s=>s.id===p.session_id));
-    return pe.length>0?"done":"progress";
+    const allDone=se.every(s=>pesees.some(p=>p.session_id===s.id));
+    return allDone?"done":"progress";
   };
 
   const saveEdit=async()=>{
