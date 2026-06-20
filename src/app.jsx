@@ -575,77 +575,31 @@ const Dashboard=()=>{
         </div>
       )}
 
-      <Crd>
-        <STL icon="📊" text="ANALYSE WASHES"/>
-        {/* Period selector */}
-        <div style={{display:"flex",gap:6,marginBottom:14,overflowX:"auto",scrollbarWidth:"none"}}>
-          {[["wash","Wash"],["semaine","Semaine"],["mois","Mois"],["3mois","3 Mois"],["an","An"]].map(([id,lbl])=>(
-            <button key={id} onClick={()=>setPeriod(id)} style={{flexShrink:0,padding:"7px 14px",borderRadius:9,fontSize:12,fontWeight:700,background:period===id?T.orange+"22":T.bg3,color:period===id?T.orange:T.dim,border:`1px solid ${period===id?T.orange+"66":T.border}`}}>{lbl}</button>
-          ))}
-        </div>
-        {(()=>{
-          const {strainNames,data,labels}=chart;
-          const W=320,H=140,PAD=26;
-          const maxV=Math.max(1,...strainNames.flatMap(st=>labels.map(l=>data[st]?.[l]||0)));
-          const xStep=labels.length>1?(W-PAD*2)/(labels.length-1):0;
-          const xy=(vi,val)=>[PAD+vi*xStep, H-PAD-((val/maxV)*(H-PAD*2))];
-          const smooth=(pts)=>{
-            if(pts.length<2)return "";
-            let d=`M ${pts[0][0]},${pts[0][1]}`;
-            for(let i=0;i<pts.length-1;i++){const[x0,y0]=pts[i],[x1,y1]=pts[i+1];const cx=(x0+x1)/2;d+=` C ${cx},${y0} ${cx},${y1} ${x1},${y1}`;}
-            return d;
-          };
-          if(labels.length===0)return<div style={{textAlign:"center",color:T.dim,padding:30,fontSize:13}}>Aucune donnée pour cette période</div>;
-          return(
-            <div style={{width:"100%",overflowX:"auto"}}>
-              <svg viewBox={`0 0 ${W} ${H}`} style={{width:"100%",minWidth:300,height:160}}>
-                <defs>
-                  {strainNames.map((st,i)=>{const c=SC[i%SC.length];return(
-                    <linearGradient key={st} id={`grad${i}`} x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={c} stopOpacity="0.35"/>
-                      <stop offset="100%" stopColor={c} stopOpacity="0"/>
-                    </linearGradient>
-                  );})}
-                </defs>
-                {[0,0.5,1].map(g=>(<line key={g} x1={PAD} y1={H-PAD-g*(H-PAD*2)} x2={W-PAD} y2={H-PAD-g*(H-PAD*2)} stroke={T.border} strokeWidth="0.5"/>))}
-                {strainNames.map((st,i)=>{
-                  const c=SC[i%SC.length];
-                  const pts=labels.map((l,vi)=>xy(vi,data[st]?.[l]||0));
-                  if(pts.length<2)return <circle key={st} cx={pts[0]?.[0]} cy={pts[0]?.[1]} r="4" fill={c}/>;
-                  const area=`${smooth(pts)} L ${pts[pts.length-1][0]},${H-PAD} L ${pts[0][0]},${H-PAD} Z`;
-                  return(<g key={st}>
-                    <path d={area} fill={`url(#grad${i})`}/>
-                    <path d={smooth(pts)} fill="none" stroke={c} strokeWidth="2.5" strokeLinecap="round" style={{filter:`drop-shadow(0 0 4px ${c}88)`}}/>
-                  </g>);
-                })}
-                {labels.map((l,vi)=>(labels.length<=14||vi%2===0)&&(<text key={l} x={PAD+vi*xStep} y={H-8} fill={T.dim} fontSize="7" textAnchor="middle" fontFamily="DM Mono">{l}</text>))}
-              </svg>
-              <div style={{display:"flex",gap:16,justifyContent:"center",marginTop:6}}>
-                {strainNames.map((st,i)=>(
-                  <div key={st} style={{display:"flex",alignItems:"center",gap:6}}>
-                    <div style={{width:14,height:3,borderRadius:2,background:SC[i%SC.length],boxShadow:`0 0 6px ${SC[i%SC.length]}`}}/>
-                    <span style={{fontSize:12,color:T.ink,fontWeight:600}}>{st}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        })()}
-        <div style={{borderTop:`1px solid ${T.border}`,marginTop:14,paddingTop:14}}>
-          <div style={{fontSize:9,color:T.dim,marginBottom:8,letterSpacing:"0.1em",textTransform:"uppercase"}}>Classement total</div>
-          {wBS.map(([nom,cnt],i)=>(
-            <div key={nom} style={{marginBottom:8}}>
-              <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
-                <span style={{fontSize:12,color:T.white}}>{nom}</span>
-                <span style={{fontSize:12,color:SC[i%SC.length],fontWeight:700,fontFamily:"DM Mono"}}>{cnt}W</span>
-              </div>
-              <div style={{height:4,background:T.border,borderRadius:2}}><div style={{height:"100%",width:`${(cnt/maxW)*100}%`,background:SC[i%SC.length],borderRadius:2,transition:"width 0.5s"}}/></div>
-            </div>
-          ))}
-          {/* Rendement banner integrated */}
-          <div style={{borderTop:`1px solid ${T.border}`,marginTop:10,paddingTop:12,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-            <span style={{fontSize:11,color:T.dim,letterSpacing:"0.1em",textTransform:"uppercase"}}>Rendement par strain</span>
+      <Crd s={{padding:14}}>
+        <STL icon="📊" text="WASH PAR STRAIN" col={T.cyan}/>
+        {wBS.length===0?(
+          <div style={{textAlign:"center",color:T.dim,padding:16,fontSize:12}}>Aucune donnée</div>
+        ):(
+          <div style={{width:"100%"}}>
+            <svg viewBox={`0 0 300 ${wBS.length*32+10}`} style={{width:"100%",height:wBS.length*32+10}}>
+              {wBS.map(([nom,cnt],i)=>{
+                const c=SC[i%SC.length];
+                const barW=(cnt/maxW)*220;
+                const y=i*32+6;
+                return(
+                  <g key={nom}>
+                    <text x="0" y={y+13} fill={T.white} fontSize="10" fontWeight="700" fontFamily="Inter">{nom.length>12?nom.slice(0,12)+"…":nom}</text>
+                    <rect x="0" y={y+18} width="220" height="6" rx="3" fill={T.border}/>
+                    <rect x="0" y={y+18} width={Math.max(4,barW)} height="6" rx="3" fill={c} style={{filter:`drop-shadow(0 0 3px ${c}88)`}}/>
+                    <text x="290" y={y+13} fill={c} fontSize="11" fontWeight="800" fontFamily="Rajdhani" textAnchor="end">{cnt}W</text>
+                  </g>
+                );
+              })}
+            </svg>
           </div>
+        )}
+        <div style={{borderTop:`1px solid ${T.border}`,marginTop:14,paddingTop:12}}>
+          <div style={{fontSize:9,color:T.dim,marginBottom:8,letterSpacing:"0.1em",textTransform:"uppercase"}}>Rendement par strain</div>
           {rendBS.filter(r=>r.rend!=="—").map((r,i)=>(
             <div key={r.nom} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:6}}>
               <span style={{fontSize:12,color:T.white}}>{r.nom}</span>
@@ -665,15 +619,33 @@ const Dashboard=()=>{
         return(
           <Crd s={{marginBottom:16,border:`1px solid ${T.gold}33`}}>
             <STL icon="⏳" text="EN COURS — FREEZE DRYER" col={T.gold}/>
-            {inProgress.map(se=>(
-              <div key={se.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:`1px solid ${T.border}`}}>
-                <div>
-                  <span style={{fontSize:13,color:T.white,fontWeight:600}}>{se.strain||"—"}</span>
-                  <span style={{fontSize:10,color:T.dim,marginLeft:8}}>{MS[se.machine]} · {se.date}</span>
+            {inProgress.map(se=>{
+              const seWashes=washes.filter(w=>w.session_id===se.id).sort((a,b)=>(a.numero||0)-(b.numero||0));
+              const lastW=seWashes[seWashes.length-1];
+              const mc=MC[se.machine]||T.gold;
+              return(
+                <div key={se.id} style={{background:T.bg3,borderRadius:10,padding:"10px 12px",marginBottom:8,border:`1px solid ${mc}33`}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8}}>
+                      <span style={{fontSize:13,color:T.white,fontWeight:700}}>{se.strain||"—"}</span>
+                      <Bdg col={mc}>{MS[se.machine]||se.machine}</Bdg>
+                    </div>
+                    <span style={{fontSize:9,color:T.gold,fontWeight:700,background:"#2a1f0a",border:`1px solid ${T.gold}44`,borderRadius:5,padding:"2px 7px"}}>⏳ En cours</span>
+                  </div>
+                  <div style={{fontSize:10,color:T.dim,marginBottom:6}}>{se.date} · {se.biomasse_kg}kg · {se.nb_sacs} sacs · {seWashes.length} wash(es)</div>
+                  {lastW&&(
+                    <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                      <Bdg col={T.orange}>W{lastW.numero}</Bdg>
+                      {lastW.micron&&<Bdg>{lastW.micron}</Bdg>}
+                      {lastW.glace&&lastW.glace!=="—"&&<Bdg col={T.cyan}>❄ {lastW.glace}</Bdg>}
+                      {lastW.vitesse&&<Bdg col={T.ink}>⚙ {lastW.vitesse}</Bdg>}
+                      {lastW.couleur_wash&&<Bdg col={T.dim}>{lastW.couleur_wash}</Bdg>}
+                      {lastW.contaminants&&<Bdg col={T.danger}>⚠</Bdg>}
+                    </div>
+                  )}
                 </div>
-                <span style={{fontSize:10,color:T.gold,fontWeight:700,background:"#2a1f0a",border:`1px solid ${T.gold}44`,borderRadius:5,padding:"2px 8px",flexShrink:0}}>⏳ En cours</span>
-              </div>
-            ))}
+              );
+            })}
           </Crd>
         );
       })()}
@@ -1130,12 +1102,20 @@ const Calendrier=()=>{
                 {hOpen===date&&(
                   <div style={{padding:"8px 4px"}}>
                     {g.washes.map(w=>(
-                      <div key={w.id} style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",padding:"6px 8px",borderBottom:`1px solid ${T.border}`}}>
-                        <Bdg col={T.orange}>W{w.numero}</Bdg>
-                        <span style={{fontSize:11,fontWeight:700,color:T.white}}>{w.sessions?.strain}</span>
-                        <Bdg col={MC[w.sessions?.machine]||T.dim}>{MS[w.sessions?.machine]}</Bdg>
-                        {w.micron&&<Bdg>{w.micron}</Bdg>}
-                        {w.couleur_wash&&<Bdg col={T.dim}>{w.couleur_wash}</Bdg>}
+                      <div key={w.id} style={{padding:"8px",marginBottom:6,background:T.bg,borderRadius:8,border:`1px solid ${T.border}`}}>
+                        <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:4}}>
+                          <Bdg col={T.orange}>W{w.numero||"?"}</Bdg>
+                          <span style={{fontSize:12,fontWeight:700,color:T.white}}>{w.sessions?.strain||"—"}</span>
+                          <Bdg col={MC[w.sessions?.machine]||T.dim}>{MS[w.sessions?.machine]||w.sessions?.machine||"—"}</Bdg>
+                        </div>
+                        <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+                          {w.micron&&<Bdg>{w.micron}</Bdg>}
+                          {w.glace&&w.glace!=="—"&&<Bdg col={T.cyan}>❄ {w.glace}</Bdg>}
+                          {w.vitesse&&<Bdg col={T.ink}>⚙ {w.vitesse}</Bdg>}
+                          {w.couleur_wash&&<Bdg col={T.dim}>{w.couleur_wash}</Bdg>}
+                          {w.texture&&<Bdg col={T.ink}>{w.texture}</Bdg>}
+                          {w.contaminants&&<Bdg col={T.danger}>⚠</Bdg>}
+                        </div>
                       </div>
                     ))}
                   </div>
