@@ -349,7 +349,7 @@ const Lbl=({c})=><div style={{fontSize:9,fontWeight:600,color:T.dim,letterSpacin
 const Fld=({label,children})=><div style={{marginBottom:14}}><Lbl c={label}/>{children}</div>;
 const Btn=({c:children,onClick,col=T.cyan,disabled,s={}})=><button onClick={onClick} disabled={disabled} style={{background:disabled?"rgba(255,255,255,0.05)":`linear-gradient(135deg,${col}22,${col}11)`,color:disabled?T.dim:col,fontWeight:700,fontSize:14,padding:"13px 24px",borderRadius:10,width:"100%",border:`1px solid ${disabled?"rgba(255,255,255,0.05)":col+"66"}`,boxShadow:disabled?"none":`0 0 12px ${col}22`,opacity:disabled?0.5:1,letterSpacing:"0.05em",...s}}>{children}</button>;
 const BOL=({c:children,onClick,col=T.dim,s={}})=><button onClick={onClick} style={{background:"transparent",color:col,border:`1px solid ${col}44`,fontWeight:600,fontSize:13,padding:"12px 20px",borderRadius:10,width:"100%",...s}}>{children}</button>;
-const Bdg=({c:children,col=T.gold})=><span style={{background:col+"18",color:col,border:`1px solid ${col}33`,borderRadius:5,padding:"2px 9px",fontSize:11,fontWeight:600,whiteSpace:"nowrap"}}>{children}</span>;
+const Bdg=({children,col=T.gold})=><span style={{background:col+"18",color:col,border:`1px solid ${col}33`,borderRadius:5,padding:"2px 9px",fontSize:11,fontWeight:600,whiteSpace:"nowrap"}}>{children}</span>;
 const Crd=({children,s={},glow,col})=><div style={{background:"rgba(20,20,30,0.65)",backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)",border:glow?`1px solid ${(col||T.cyan)+"44"}`:"1px solid rgba(255,255,255,0.06)",borderRadius:14,padding:16,marginBottom:12,boxShadow:"0 8px 32px rgba(0,0,0,0.4)",borderTop:glow?`1px solid ${(col||T.cyan)+"66"}`:"1px solid rgba(255,255,255,0.09)",...s}}>{children}</div>;
 const STL=({icon,text,col=T.cyan})=>(
   <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
@@ -651,7 +651,10 @@ const Dashboard=()=>{
       })()}
 
       {/* ── CATALOGUE SECTION ── */}
-      <CatalogueSection/>
+      <CatalogueSection sessions={sessions} pesees={pesees} strains={strains} onPeseeAdded={()=>{
+        Promise.all([sbFetch("sessions?select=*&order=date.desc"),sbFetch("washes?select=*"),sbFetch("pesees?select=*"),sbFetch("strains?select=*&order=nom.asc")])
+          .then(([a,b,c,d])=>{ss(a||[]);sw(b||[]);sp(c||[]);sst(d||[]);}).catch(()=>{});
+      }}/>
     </div>
   );
 };
@@ -1337,11 +1340,7 @@ const CatalogueModal=({sel,selSt,selC,sessions,pesees,getR,fRef,upload,editing,s
 };
 
 // ── CATALOGUE SECTION (intégrée dans Dashboard) ───────────────────────────────
-const CatalogueSection=()=>{
-  const[strains,sSt]=useState([]);
-  const[sessions,sSe]=useState([]);
-  const[pesees,sPe]=useState([]);
-  const[loading,sl]=useState(true);
+const CatalogueSection=({sessions,pesees,strains,onPeseeAdded})=>{
   const[sel,sSel]=useState(null);
   const[editing,sEd]=useState(null);
   const[ed,sED]=useState({});
@@ -1349,11 +1348,8 @@ const CatalogueSection=()=>{
   const[showP,sShP]=useState(false);
   const[nP,sNP]=useState({sessionIds:[],m90:0,m45:0});
   const fRef=useRef();
-
-  useEffect(()=>{
-    Promise.all([sbFetch("strains?select=*&order=nom.asc"),sbFetch("sessions?select=*"),sbFetch("pesees?select=*")])
-      .then(([a,b,c])=>{sSt(a||[]);sSe(b||[]);sPe(c||[]);}).catch(()=>{}).finally(()=>sl(false));
-  },[]);
+  const sSt=()=>{}; // no-op, strains now controlled by parent via props
+  const loading=false;
 
   const allSt=useMemo(()=>{
     if(strains.length>0)return strains;
@@ -1382,7 +1378,7 @@ const CatalogueSection=()=>{
       const ex=strains.find(s=>s.nom===editing);
       if(ex)await sbFetch(`strains?nom=eq.${encodeURIComponent(editing)}`,{method:"PATCH",prefer:"return=minimal",body:JSON.stringify(ed)});
       else await sbFetch("strains",{method:"POST",prefer:"return=minimal",body:JSON.stringify({nom:editing,...ed})});
-      const st=await sbFetch("strains?select=*&order=nom.asc");sSt(st||[]);sEd(null);
+      onPeseeAdded&&onPeseeAdded();sEd(null);
     }catch(e){alert("Erreur: "+e.message);}
     finally{sSav(false);}
   };
@@ -1396,7 +1392,7 @@ const CatalogueSection=()=>{
       if(!r.ok)throw new Error(await r.text());
       const url=`${SB_URL}/storage/v1/object/public/strain-photos/${path}`;
       await sbFetch(`strains?nom=eq.${encodeURIComponent(nom)}`,{method:"PATCH",prefer:"return=minimal",body:JSON.stringify({photo_url:url})});
-      const st=await sbFetch("strains?select=*&order=nom.asc");sSt(st||[]);
+      onPeseeAdded&&onPeseeAdded();
     }catch(e){alert("Upload: "+e.message);}
   };
 
@@ -1429,7 +1425,7 @@ const CatalogueSection=()=>{
         if(m45Part>0)rows.push({session_id:se.id,micron:"45µ",poids_sec_g:Math.round(m45Part*10)/10});
       });
       if(rows.length>0)await sbFetch("pesees",{method:"POST",prefer:"return=minimal",body:JSON.stringify(rows)});
-      const p=await sbFetch("pesees?select=*");sPe(p||[]);sShP(false);sNP({sessionIds:[],m90:0,m45:0});
+      onPeseeAdded&&onPeseeAdded();sShP(false);sNP({sessionIds:[],m90:0,m45:0});
     }catch(e){alert("Erreur: "+e.message);}
     finally{sSav(false);}
   };
