@@ -58,7 +58,6 @@ button{cursor:pointer;font-family:'Inter',sans-serif;border:none;outline:none;tr
 
 // ── TIMER ──────────────────────────────────────────────────────────────────────
 const LTK = (m) => `sz_t_${m.replace(/\s/g,"_")}`;
-const TINIT = { duree:15, remaining:null, running:false, done:false, startedAt:null };
 const useTimer = (machine) => {
   const k = LTK(machine);
   const load = () => { try { const s=localStorage.getItem(k); if(s) return JSON.parse(s); } catch{} return {...TINIT}; };
