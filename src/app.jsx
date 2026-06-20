@@ -656,6 +656,28 @@ const Dashboard=()=>{
         </div>
       </Crd>
 
+      {/* ── SESSIONS EN COURS (Freeze Dryer) ── */}
+      {(()=>{
+        const strainNames=[...new Set(sessions.map(s=>s.strain).filter(Boolean))];
+        const inProgress=strainNames.filter(nom=>{
+          const se=sessions.filter(s=>s.strain===nom);
+          const pe=pesees.filter(p=>se.find(s=>s.id===p.session_id));
+          return pe.length===0;
+        });
+        if(inProgress.length===0)return null;
+        return(
+          <Crd s={{marginBottom:16,border:`1px solid ${T.gold}33`}}>
+            <STL icon="⏳" text="EN COURS — FREEZE DRYER" col={T.gold}/>
+            {inProgress.map(nom=>(
+              <div key={nom} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:`1px solid ${T.border}`}}>
+                <span style={{fontSize:13,color:T.white,fontWeight:600}}>{nom}</span>
+                <span style={{fontSize:10,color:T.gold,fontWeight:700,background:"#2a1f0a",border:`1px solid ${T.gold}44`,borderRadius:5,padding:"2px 8px"}}>⏳ En cours</span>
+              </div>
+            ))}
+          </Crd>
+        );
+      })()}
+
       {/* ── CATALOGUE SECTION ── */}
       <CatalogueSection/>
     </div>
@@ -1352,6 +1374,13 @@ const CatalogueSection=()=>{
     return b>0?((po/(b*1000))*100).toFixed(2):null;
   };
 
+  const getStatus=(nom)=>{
+    const se=sessions.filter(s=>s.strain===nom);
+    if(se.length===0)return null;
+    const pe=pesees.filter(p=>se.find(s=>s.id===p.session_id));
+    return pe.length>0?"done":"progress";
+  };
+
   const saveEdit=async()=>{
     if(!editing)return;sSav(true);
     try{
@@ -1482,6 +1511,7 @@ const CatalogueSection=()=>{
         {allSt.map((s,i)=>{
           const nom=s.nom||s,r=getR(nom),c=SC[i%SC.length],rec=r&&parseFloat(r)>4;
           const typeProd=s.type_produit;
+          const status=getStatus(nom);
           return(
             <div key={nom} onClick={()=>sSel(nom)} style={{borderRadius:14,overflow:"hidden",cursor:"pointer",background:T.card,border:`1px solid ${rec?T.aura+"66":T.border}`,boxShadow:rec?`0 0 20px ${T.aura}22`:"none",transition:"all 0.2s"}}>
               {/* Zone photo */}
@@ -1492,6 +1522,12 @@ const CatalogueSection=()=>{
                   {typeProd&&<span style={{background:typeProd==="WPFF"?"#1a3a2a":"#2a1a0a",color:typeProd==="WPFF"?"#4ade80":T.gold,border:`1px solid ${typeProd==="WPFF"?"#4ade8044":T.gold+"44"}`,borderRadius:5,padding:"2px 7px",fontSize:9,fontWeight:800,letterSpacing:"0.05em"}}>{typeProd==="WPFF"?"🧊 WPFF":"🔥 ROSIN"}</span>}
                   {rec&&<span style={{background:T.aura,color:"#000",borderRadius:5,padding:"2px 7px",fontSize:9,fontWeight:800}}>★ REC</span>}
                 </div>
+                {/* Badge statut top droite */}
+                {status&&<div style={{position:"absolute",top:8,right:8}}>
+                  <span style={{background:status==="done"?"#0a2e1a":"#2a1f0a",color:status==="done"?T.green:T.gold,border:`1px solid ${status==="done"?T.green+"55":T.gold+"55"}`,borderRadius:5,padding:"2px 8px",fontSize:9,fontWeight:800,display:"flex",alignItems:"center",gap:3}}>
+                    {status==="done"?"✓ Terminé":"⏳ En cours"}
+                  </span>
+                </div>}
                 {/* Gradient bas */}
                 <div style={{position:"absolute",bottom:0,left:0,right:0,height:50,background:"linear-gradient(0deg,#0B0B1AEE,transparent)"}}/>
               </div>
