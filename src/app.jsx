@@ -379,7 +379,7 @@ const Load=()=><div style={{display:"flex",justifyContent:"center",alignItems:"c
 const KPI=({label,value,col=T.orange,detail,framed})=>{
   const[open,sO]=useState(false);
   return(
-    <div onClick={()=>detail&&sO(x=>!x)} style={{background:framed?T.card:"transparent",border:framed?`2px solid ${open?col:col+"66"}`:"none",borderRadius:14,padding:framed?"18px 20px":"10px 4px",flex:1,cursor:detail?"pointer":"default",position:"relative",overflow:"hidden"}}>
+    <div onClick={()=>detail&&sO(x=>!x)} style={{background:framed?T.card:"transparent",border:framed?`2px solid ${open?col:col+"66"}`:"none",borderRadius:14,padding:framed?"18px 20px":"10px 4px",flex:1,cursor:detail?"pointer":"default",position:"relative",overflow:"hidden",display:"flex",flexDirection:"column",justifyContent:"center"}}>
       {framed&&<div style={{position:"absolute",top:-16,right:-16,width:64,height:64,borderRadius:"50%",background:`radial-gradient(circle,${col}22,transparent)`}}/>}
       <div style={{fontSize:9,color:T.dim,textTransform:"uppercase",letterSpacing:"0.12em",marginBottom:6}}>{label}</div>
       <div style={{fontSize:framed?38:32,fontWeight:800,color:col,fontFamily:"DM Mono",lineHeight:1}}>{value??'—'}</div>
@@ -1071,13 +1071,20 @@ const Calendrier=()=>{
                 {hOpen===strain&&(
                   <div style={{padding:"8px 4px"}}>
                     {g.washes.map(w=>(
-                      <div key={w.id} style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",padding:"6px 8px",borderBottom:`1px solid ${T.border}`}}>
-                        <Bdg col={T.orange}>W{w.numero}</Bdg>
-                        <span style={{fontSize:10,color:T.dim}}>{w.sessions?.date}</span>
-                        <Bdg col={MC[w.sessions?.machine]||T.dim}>{MS[w.sessions?.machine]}</Bdg>
-                        {w.micron&&<Bdg>{w.micron}</Bdg>}
-                        {w.couleur_wash&&<Bdg col={T.dim}>{w.couleur_wash}</Bdg>}
-                        {w.contaminants&&<Bdg col={T.danger}>⚠</Bdg>}
+                      <div key={w.id} style={{padding:"8px",marginBottom:6,background:T.bg,borderRadius:8,border:`1px solid ${T.border}`}}>
+                        <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:4}}>
+                          <Bdg col={T.orange}>W{w.numero||"?"}</Bdg>
+                          <span style={{fontSize:11,color:T.dim}}>{w.sessions?.date||"—"}</span>
+                          <Bdg col={MC[w.sessions?.machine]||T.dim}>{MS[w.sessions?.machine]||w.sessions?.machine||"—"}</Bdg>
+                        </div>
+                        <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+                          {w.micron&&<Bdg>{w.micron}</Bdg>}
+                          {w.glace&&w.glace!=="—"&&<Bdg col={T.cyan}>❄ {w.glace}</Bdg>}
+                          {w.vitesse&&<Bdg col={T.ink}>⚙ {w.vitesse}</Bdg>}
+                          {w.couleur_wash&&<Bdg col={T.dim}>{w.couleur_wash}</Bdg>}
+                          {w.texture&&<Bdg col={T.ink}>{w.texture}</Bdg>}
+                          {w.contaminants&&<Bdg col={T.danger}>⚠</Bdg>}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -1143,12 +1150,20 @@ const Calendrier=()=>{
                   {hOpen===m&&(
                     <div style={{padding:"8px 4px"}}>
                       {g.washes.map(w=>(
-                        <div key={w.id} style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",padding:"6px 8px",borderBottom:`1px solid ${T.border}`}}>
-                          <Bdg col={T.orange}>W{w.numero}</Bdg>
-                          <span style={{fontSize:11,fontWeight:700,color:T.white}}>{w.sessions?.strain}</span>
-                          <span style={{fontSize:10,color:T.dim}}>{w.sessions?.date}</span>
-                          {w.micron&&<Bdg>{w.micron}</Bdg>}
-                          {w.couleur_wash&&<Bdg col={T.dim}>{w.couleur_wash}</Bdg>}
+                        <div key={w.id} style={{padding:"8px",marginBottom:6,background:T.bg,borderRadius:8,border:`1px solid ${T.border}`}}>
+                          <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:4}}>
+                            <Bdg col={T.orange}>W{w.numero||"?"}</Bdg>
+                            <span style={{fontSize:12,fontWeight:700,color:T.white}}>{w.sessions?.strain||"—"}</span>
+                            <span style={{fontSize:10,color:T.dim}}>{w.sessions?.date||"—"}</span>
+                          </div>
+                          <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+                            {w.micron&&<Bdg>{w.micron}</Bdg>}
+                            {w.glace&&w.glace!=="—"&&<Bdg col={T.cyan}>❄ {w.glace}</Bdg>}
+                            {w.vitesse&&<Bdg col={T.ink}>⚙ {w.vitesse}</Bdg>}
+                            {w.couleur_wash&&<Bdg col={T.dim}>{w.couleur_wash}</Bdg>}
+                            {w.texture&&<Bdg col={T.ink}>{w.texture}</Bdg>}
+                            {w.contaminants&&<Bdg col={T.danger}>⚠</Bdg>}
+                          </div>
                         </div>
                       ))}
                     </div>
