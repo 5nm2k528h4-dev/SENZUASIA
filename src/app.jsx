@@ -1347,7 +1347,7 @@ const CatalogueSection=()=>{
   const[ed,sED]=useState({});
   const[saving,sSav]=useState(false);
   const[showP,sShP]=useState(false);
-  const[nP,sNP]=useState({strain:"",m90:0,m45:0});
+  const[nP,sNP]=useState({sessionIds:[],m90:0,m45:0});
   const fRef=useRef();
 
   useEffect(()=>{
@@ -1405,14 +1405,31 @@ const CatalogueSection=()=>{
       .sort((a,b)=>(b.date||"").localeCompare(a.date||""));
   },[sessions,pesees]);
 
+  const selectedSessions=useMemo(()=>{
+    return unpesedSessions.filter(se=>nP.sessionIds.includes(se.id));
+  },[unpesedSessions,nP.sessionIds]);
+
+  const totalBiomasse=useMemo(()=>{
+    return selectedSessions.reduce((a,s)=>a+(parseFloat(s.biomasse_kg)||0),0);
+  },[selectedSessions]);
+
+  const toggleSession=(id)=>{
+    sNP(x=>({...x,sessionIds:x.sessionIds.includes(id)?x.sessionIds.filter(i=>i!==id):[...x.sessionIds,id]}));
+  };
+
   const addPesee=async()=>{
-    if(!nP.sessionId)return;sSav(true);
+    if(nP.sessionIds.length===0||totalBiomasse<=0)return;sSav(true);
     try{
       const rows=[];
-      if(parseFloat(nP.m90)>0)rows.push({session_id:nP.sessionId,micron:"90µ",poids_sec_g:parseFloat(nP.m90)});
-      if(parseFloat(nP.m45)>0)rows.push({session_id:nP.sessionId,micron:"45µ",poids_sec_g:parseFloat(nP.m45)});
+      selectedSessions.forEach(se=>{
+        const ratio=(parseFloat(se.biomasse_kg)||0)/totalBiomasse;
+        const m90Part=parseFloat(nP.m90)*ratio;
+        const m45Part=parseFloat(nP.m45)*ratio;
+        if(m90Part>0)rows.push({session_id:se.id,micron:"90µ",poids_sec_g:Math.round(m90Part*10)/10});
+        if(m45Part>0)rows.push({session_id:se.id,micron:"45µ",poids_sec_g:Math.round(m45Part*10)/10});
+      });
       if(rows.length>0)await sbFetch("pesees",{method:"POST",prefer:"return=minimal",body:JSON.stringify(rows)});
-      const p=await sbFetch("pesees?select=*");sPe(p||[]);sShP(false);sNP({sessionId:"",m90:0,m45:0});
+      const p=await sbFetch("pesees?select=*");sPe(p||[]);sShP(false);sNP({sessionIds:[],m90:0,m45:0});
     }catch(e){alert("Erreur: "+e.message);}
     finally{sSav(false);}
   };
@@ -1431,75 +1448,77 @@ const CatalogueSection=()=>{
         </button>
       </div>
 
-      {/* Formulaire pesées */}
+      {/* Formulaire pesées groupées */}
       {showP&&(
         <div style={{background:T.bg2,border:`1px solid ${T.gold}33`,borderRadius:14,padding:14,marginBottom:14}}>
-          {/* Layout horizontal : formulaire gauche + camembert droite */}
-          <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:12,alignItems:"start"}}>
-            {/* Formulaire gauche */}
-            <div>
-              <div style={{fontSize:10,color:T.gold,fontWeight:800,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10,textAlign:"center"}}>⚖ Pesées Freeze Dryer</div>
-              <div style={{marginBottom:8}}>
-                <div style={{fontSize:9,color:T.dim,textAlign:"center",marginBottom:4,letterSpacing:"0.08em",textTransform:"uppercase"}}>Session (strain · machine · date)</div>
-                <select value={nP.sessionId} onChange={e=>sNP(x=>({...x,sessionId:e.target.value}))} style={{fontSize:11,padding:"8px 6px"}}>
-                  <option value="">Sélectionner...</option>
-                  {unpesedSessions.map(se=><option key={se.id} value={se.id}>{se.strain} · {MS[se.machine]||se.machine} · {se.date}</option>)}
-                </select>
-                {unpesedSessions.length===0&&<div style={{fontSize:10,color:T.dim,textAlign:"center",marginTop:6,fontStyle:"italic"}}>Toutes les sessions sont pesées ✓</div>}
+          <div style={{fontSize:10,color:T.gold,fontWeight:800,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10,textAlign:"center"}}>⚖ Pesée groupée Freeze Dryer</div>
+
+          {/* Sélection multi-sessions */}
+          <div style={{marginBottom:10}}>
+            <div style={{fontSize:9,color:T.dim,marginBottom:6,letterSpacing:"0.08em",textTransform:"uppercase"}}>Sessions à peser ensemble</div>
+            {unpesedSessions.length===0?(
+              <div style={{fontSize:11,color:T.dim,textAlign:"center",padding:10,fontStyle:"italic"}}>Toutes les sessions sont pesées ✓</div>
+            ):(
+              <div style={{maxHeight:160,overflowY:"auto",display:"flex",flexDirection:"column",gap:5}}>
+                {unpesedSessions.map(se=>{
+                  const checked=nP.sessionIds.includes(se.id);
+                  const mc=MC[se.machine]||T.gold;
+                  return(
+                    <button key={se.id} onClick={()=>toggleSession(se.id)} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",borderRadius:8,background:checked?mc+"22":T.bg3,border:`1.5px solid ${checked?mc:T.border}`,textAlign:"left"}}>
+                      <div style={{width:18,height:18,borderRadius:5,border:`2px solid ${checked?mc:T.border}`,background:checked?mc:"transparent",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                        {checked&&<span style={{color:"#000",fontSize:11,fontWeight:900}}>✓</span>}
+                      </div>
+                      <span style={{fontSize:12,fontWeight:700,color:T.white,flex:1}}>{se.strain}</span>
+                      <Bdg col={mc}>{MS[se.machine]||se.machine}</Bdg>
+                      <span style={{fontSize:10,color:T.dim}}>{se.biomasse_kg}kg</span>
+                    </button>
+                  );
+                })}
               </div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-                {[["90µ (g)","m90"],["45µ / FS (g)","m45"]].map(([lbl,key])=>(
-                  <div key={key}>
-                    <div style={{fontSize:9,color:T.dim,textAlign:"center",marginBottom:4,letterSpacing:"0.08em",textTransform:"uppercase"}}>{lbl}</div>
-                    <div style={{display:"flex",alignItems:"center",gap:4}}>
-                      <button onClick={()=>sNP(x=>({...x,[key]:Math.max(0,parseFloat(x[key]||0)-0.1).toFixed(1)}))} style={{width:30,height:30,borderRadius:7,background:T.bg3,border:`1px solid ${T.border}`,color:T.white,fontSize:16,fontWeight:700,flexShrink:0}}>−</button>
-                      <input type="number" value={nP[key]} onChange={e=>sNP(x=>({...x,[key]:e.target.value}))} style={{textAlign:"center",fontSize:15,fontWeight:800,color:T.orange,fontFamily:"DM Mono",padding:"6px 2px"}} min="0" step="0.1"/>
-                      <button onClick={()=>sNP(x=>({...x,[key]:parseFloat((parseFloat(x[key]||0)+0.1).toFixed(1))}))} style={{width:30,height:30,borderRadius:7,background:T.orange,color:"#fff",fontSize:16,fontWeight:700,flexShrink:0}}>+</button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div style={{display:"flex",gap:6,marginTop:10}}>
-                <button onClick={()=>sShP(false)} style={{flex:1,padding:"8px",borderRadius:8,background:"transparent",border:`1px solid ${T.border}`,color:T.dim,fontWeight:600,fontSize:12}}>Annuler</button>
-                <button onClick={addPesee} disabled={saving} style={{padding:"8px 16px",borderRadius:8,background:T.gold,color:"#000",fontWeight:800,fontSize:18,opacity:saving?0.5:1}}>💾</button>
-              </div>
+            )}
+          </div>
+
+          {nP.sessionIds.length>0&&(
+            <div style={{fontSize:10,color:T.cyan,textAlign:"center",marginBottom:10,background:T.cyan+"15",borderRadius:6,padding:"4px 8px"}}>
+              {nP.sessionIds.length} session(s) · {totalBiomasse.toFixed(1)}kg total
             </div>
-            {/* Camembert droite — rendements 90µ vs 45µ */}
-            {(()=>{
-              const total=allSt.reduce((acc,s)=>{
-                const se=sessions.filter(x=>x.strain===(s.nom||s));
-                const pe=pesees.filter(p=>se.find(x=>x.id===p.session_id));
-                pe.forEach(p=>{acc[p.micron]=(acc[p.micron]||0)+(parseFloat(p.poids_sec_g)||0);});
-                return acc;
-              },{});
-              const v90=total["90µ"]||0,v45=total["45µ"]||0,tot=(v90+v45)||1;
-              const pct90=v90/tot,pct45=v45/tot;
-              const a90=pct90*2*Math.PI,a45=pct45*2*Math.PI;
-              const R=42,cx=50,cy=50;
-              const x1=cx+R*Math.sin(0),y1=cy-R*Math.cos(0);
-              const x2=cx+R*Math.sin(a90),y2=cy-R*Math.cos(a90);
-              const lg=a90>Math.PI?1:0;
-              return(
-                <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:8,paddingTop:22}}>
-                  <svg width="100" height="100" viewBox="0 0 100 100">
-                    {v90>0&&v45>0?(
-                      <>
-                        <path d={`M ${cx} ${cy} L ${x1} ${y1} A ${R} ${R} 0 ${lg} 1 ${x2} ${y2} Z`} fill={T.orange} opacity="0.9"/>
-                        <path d={`M ${cx} ${cy} L ${x2} ${y2} A ${R} ${R} 0 ${1-lg} 1 ${x1} ${y1} Z`} fill={T.gold} opacity="0.9"/>
-                      </>
-                    ):(
-                      <circle cx={cx} cy={cy} r={R} fill={v90>0?T.orange:T.gold} opacity="0.9"/>
-                    )}
-                    <circle cx={cx} cy={cy} r={22} fill={T.bg2}/>
-                    <text x={cx} y={cy+5} textAnchor="middle" fontSize="11" fontWeight="800" fontFamily="DM Mono" fill={T.white}>{tot.toFixed(0)}g</text>
-                  </svg>
-                  <div style={{display:"flex",gap:8}}>
-                    <div style={{display:"flex",alignItems:"center",gap:4}}><div style={{width:8,height:8,borderRadius:2,background:T.orange}}/><span style={{fontSize:9,color:T.dim}}>90µ {v90>0?v90.toFixed(0)+"g":"—"}</span></div>
-                    <div style={{display:"flex",alignItems:"center",gap:4}}><div style={{width:8,height:8,borderRadius:2,background:T.gold}}/><span style={{fontSize:9,color:T.dim}}>45µ {v45>0?v45.toFixed(0)+"g":"—"}</span></div>
-                  </div>
+          )}
+
+          {/* Poids total groupé */}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
+            {[["90µ total (g)","m90"],["45µ / FS total (g)","m45"]].map(([lbl,key])=>(
+              <div key={key}>
+                <div style={{fontSize:9,color:T.dim,textAlign:"center",marginBottom:4,letterSpacing:"0.08em",textTransform:"uppercase"}}>{lbl}</div>
+                <div style={{display:"flex",alignItems:"center",gap:4}}>
+                  <button onClick={()=>sNP(x=>({...x,[key]:Math.max(0,parseFloat(x[key]||0)-1).toFixed(1)}))} style={{width:30,height:30,borderRadius:7,background:T.bg3,border:`1px solid ${T.border}`,color:T.white,fontSize:16,fontWeight:700,flexShrink:0}}>−</button>
+                  <input type="number" value={nP[key]} onChange={e=>sNP(x=>({...x,[key]:e.target.value}))} style={{textAlign:"center",fontSize:15,fontWeight:800,color:T.orange,fontFamily:"DM Mono",padding:"6px 2px"}} min="0" step="0.1"/>
+                  <button onClick={()=>sNP(x=>({...x,[key]:parseFloat((parseFloat(x[key]||0)+1).toFixed(1))}))} style={{width:30,height:30,borderRadius:7,background:T.orange,color:"#fff",fontSize:16,fontWeight:700,flexShrink:0}}>+</button>
                 </div>
-              );
-            })()}
+              </div>
+            ))}
+          </div>
+
+          {/* Aperçu répartition */}
+          {selectedSessions.length>0&&(parseFloat(nP.m90)>0||parseFloat(nP.m45)>0)&&(
+            <div style={{marginBottom:10,background:T.bg3,borderRadius:8,padding:8}}>
+              <div style={{fontSize:9,color:T.dim,marginBottom:6,letterSpacing:"0.08em",textTransform:"uppercase"}}>Répartition proportionnelle</div>
+              {selectedSessions.map(se=>{
+                const ratio=(parseFloat(se.biomasse_kg)||0)/totalBiomasse;
+                const p90=(parseFloat(nP.m90)||0)*ratio;
+                const p45=(parseFloat(nP.m45)||0)*ratio;
+                return(
+                  <div key={se.id} style={{display:"flex",justifyContent:"space-between",fontSize:10,color:T.ink,marginBottom:3}}>
+                    <span>{MS[se.machine]||se.machine}</span>
+                    <span style={{fontFamily:"DM Mono",color:T.gold}}>{p90.toFixed(1)}g + {p45.toFixed(1)}g</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          <div style={{display:"flex",gap:6}}>
+            <button onClick={()=>{sShP(false);sNP({sessionIds:[],m90:0,m45:0});}} style={{flex:1,padding:"10px",borderRadius:8,background:"transparent",border:`1px solid ${T.border}`,color:T.dim,fontWeight:600,fontSize:12}}>Annuler</button>
+            <button onClick={addPesee} disabled={saving||nP.sessionIds.length===0} style={{padding:"10px 20px",borderRadius:8,background:T.gold,color:"#000",fontWeight:800,fontSize:18,opacity:saving||nP.sessionIds.length===0?0.5:1}}>💾</button>
           </div>
         </div>
       )}
